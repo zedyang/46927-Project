@@ -43,6 +43,8 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         # Variables and Inputs
         self.n_params = None
         self.all_params_dict, self.all_params = OrderedDict(), None
+        # self.all_params_dict contains structured params for convenience
+        # self.all_params is a flat (p*1) container that stacks all params
         self.X_tr, self.y_tr = None, None
         self.X_te, self.y_te = None, None
         self.feed_dict = None
@@ -74,7 +76,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.emp_risk, self.all_params)
         self.grad_L = [tf.placeholder(
             tf.float32, shape=a.get_shape())
-            for a in self.all_params]
+            for a in self.all_params_dict.values()]
 
         # initialize all variables
         init = tf.global_variables_initializer()
@@ -106,9 +108,6 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         train_op = optimizer.minimize(self.emp_risk)
         return train_op
 
-    def get_params_by_name(self, key):
-        return self.all_params
-
     def get_all_params(self):
         raise NotImplementedError
 
@@ -118,8 +117,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
     def get_eval(self, all_eval=True):
         assert self.trained is True
         if all_eval is True:
-            all_params_val, loss_val = self.sess.run(
-                [self.all_params, self.emp_risk],
+            all_params_blocks = self.sess.run(
+                list(self.all_params_dict.values()),
+                feed_dict=self.feed_dict
+            )
+            losses_val, emp_risk_val = self.sess.run(
+                [self.losses, self.emp_risk],
                 feed_dict=self.feed_dict
             )
             grad_loss_val, hessian_loss_val = self.sess.run(
@@ -127,18 +130,18 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 feed_dict=self.feed_dict
             )
             params = {key: val for key, val in zip(
-                self.all_params_dict.keys(), all_params_val)}
-            grads = {key: val for key, val in zip(
-                self.all_params_dict.keys(), grad_loss_val)}
+                self.all_params_dict.keys(), all_params_blocks)}
+            params_flat = np.concatenate(tuple(params.values()), 0)
             grads_stacked = np.vstack(grad_loss_val)
-            #dim = np.prod(all_params_val.shape)
-            hessian = None
+            hessian = np.vstack(hessian_loss_val).reshape(
+                self.n_params, self.n_params)
             return {
                 'params': params,
-                'loss': loss_val,
-                'grads': grads,
+                'params_flat': params_flat,
+                'losses': losses_val,
+                'emp_risk': emp_risk_val,
                 'grads_stacked': grads_stacked,
-                'hessian': hessian_loss_val
+                'hessian': hessian
             }
         else:
             # only retrieve parameters
@@ -151,25 +154,48 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         raise NotImplementedError
 
 
-class LinearRegressionGD(EmpiricalRiskOptimizer):
+class LinearRegression2Blocks(EmpiricalRiskOptimizer):
+    """
+    Only for debug purposes.
+    """
 
     def __init__(self, **kwargs):
-        super(LinearRegressionGD, self).__init__(**kwargs)
+        super(LinearRegression2Blocks, self).__init__(**kwargs)
+        self.p1 = None
 
     def get_all_params(self):
         self.n_params = self.p
-        self.all_params_dict['beta'] = tf.get_variable(
-            'beta', (self.n_params,1),
+        # split X into 2 blocks, for debug purpose only
+        self.p1 = int(self.p/2)
+
+        # build the flat params container
+        self.all_params = tf.get_variable(
+            'flat_params', (self.n_params, 1),
             initializer=tf.zeros_initializer)
 
-        return list(self.all_params_dict.values())
+        # build the params dict
+        self.all_params_dict[
+            'beta_block1'] = self.all_params[0:self.p1, :]
+        self.all_params_dict[
+            'beta_block2'] = self.all_params[self.p1:self.n_params, :]
+
+        return self.all_params
 
     def get_emp_risk(self):
-        beta = self.all_params_dict['beta']
-        y_hat = tf.matmul(self.X_tr, beta, name='y_hat')
+        # params dict split the params into groups, for convenience
+        b1 = self.all_params_dict['beta_block1']
+        b2 = self.all_params_dict['beta_block2']
+
+        # y_hat
+        y_hat = tf.add(
+            tf.matmul(self.X_tr[:, 0:self.p1], b1, name='block1'),
+            tf.matmul(self.X_tr[:, self.p1:self.p], b2, name='block1'),
+            name='y_hat'
+        )
+
+        # must return individual losses and total empirical risk
         losses = tf.pow(self.y_tr - y_hat, 2, name='l2_loss')
         emp_risk = tf.reduce_mean(losses, name='emp_risk')
-        #stacked_params =
         return losses, emp_risk
 
     def predict(self, X_test):
@@ -177,37 +203,13 @@ class LinearRegressionGD(EmpiricalRiskOptimizer):
         return X_test.dot(beta)
 
 
-class LinearRegressionGDSplitParams(EmpiricalRiskOptimizer):
-    """
-    Only for debug purposes.
-    """
-
-    def __init__(self, **kwargs):
-        super(LinearRegressionGDSplitParams, self).__init__(**kwargs)
-
-    def get_all_params(self):
-        return [tf.get_variable(
-            'beta', (self.p, 1),
-            initializer=tf.random_normal_initializer)]
-
-    def get_emp_risk(self):
-        beta = self.all_params
-        y_hat = tf.matmul(self.X_tr, beta, name='y_hat')
-        return tf.reduce_sum(
-            (self.y_tr - y_hat)**2/self.n, name='emp_risk')
-
-    def predict(self, X_test):
-        beta = self.get_eval(all_eval=False)
-        return X_test.dot(beta)
-
-
 if __name__ == '__main__':
-    df = pd.read_csv('data/leverage.csv')
-    X = df.values[:, 0:2]
+    df = pd.read_csv('data/lm_10.csv')
+    X = df.values[:, 0:10]
     n, p = X.shape
     y = df.values[:, -1].reshape(n, 1)
-    model = LinearRegressionGD(
-        model_name='LinearRegression',
+    model = LinearRegression2Blocks(
+        model_name='LinearRegression2Blocks',
         eta=0.001)
     model.fit(X,y,n_iter=10000)
     print(model.get_eval())
