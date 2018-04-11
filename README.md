@@ -2,7 +2,6 @@
 
 *46927 Final Project*
 
----
 
 **Authors:** Ze Yang, Zhengyang Qi, Yundong Liu, Yuze Liu
 

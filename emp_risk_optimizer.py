@@ -513,7 +513,7 @@ class LinearRegression2Blocks(EmpiricalRiskOptimizer):
         # y_hat
         y_hat = tf.add(
             tf.matmul(self.X_tr[:, 0:self.p1], b1, name='block1'),
-            tf.matmul(self.X_tr[:, self.p1:self.p], b2, name='block1'),
+            tf.matmul(self.X_tr[:, self.p1:self.p], b2, name='block2'),
             name='y_hat'
         )
 
