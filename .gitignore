@@ -126,3 +126,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# yuze test file
+test.ipynb
+y.csv
+*.csv

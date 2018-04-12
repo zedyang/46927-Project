@@ -345,7 +345,43 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 I_loss_z = U.T.dot(hvp)
                 influence_loss_val[:, idx:idx+1] = I_loss_z
             return influence_loss_val
+    
+    def refit(self, X, y, n_iter, verbose=True, **kwargs):
+        # evaluation
+        for i in range(n_iter):
+            start_time = time.time()
+            self.feed_dict = {
+                self.X_tr: X,
+                self.y_tr: y
+            }
+            _, loss_val = self.sess.run(
+                [self.train_op, self.emp_risk],
+                feed_dict=self.feed_dict)
 
+            dur_time = time.time() - start_time
+            if verbose:
+                if i % 1000 == 0:
+                    print('Step %d: loss = %.8f (%.3f sec)' % (
+                        i, loss_val, dur_time))
+        return self
+    
+    def loo_loss(self, X_valid, y_valid, method):
+        train_idx = range(self.n)
+        loo_loss_val = np.zeros((self.n, X_valid.shape[0]))
+        for counter, idx in enumerate(train_idx):
+            X_one = self.data['X'][idx:idx+1, :],
+            y_one = self.data['y'][idx:idx+1, :]
+            X_rest = pd.DataFrame([element for i, element in enumerate(self.data['X']) if i != idx])
+            y_rest = pd.DataFrame([element for i, element in enumerate(self.data['y']) if i != idx])        
+            self.refit(X_rest, y_rest, 2000, verbose=False)
+            self.feed_dict = {
+                    self.X_tr: X_valid,
+                    self.y_tr: y_valid
+                }
+            loo_loss_val[idx:idx+1,:] = np.transpose(self.get_eval(items=['losses']))
+            print('Step %d' % (counter))
+        return loo_loss_val
+        
     def get_per_elem_gradients(self, train_idx=None, **kwargs):
         """
         Calculate per element (not-aggregated)
@@ -513,7 +549,7 @@ class LinearRegression2Blocks(EmpiricalRiskOptimizer):
         # y_hat
         y_hat = tf.add(
             tf.matmul(self.X_tr[:, 0:self.p1], b1, name='block1'),
-            tf.matmul(self.X_tr[:, self.p1:self.p], b2, name='block2'),
+            tf.matmul(self.X_tr[:, self.p1:self.p], b2, name='block1'),
             name='y_hat'
         )
 
@@ -546,5 +582,11 @@ if __name__ == '__main__':
     model.fit(X_train, y_train, n_iter=10000)
     I_loss = model.influence_loss(
         X_test, y_test, method='brute-force')
+    loo_loss = model.loo_loss(X_test, y_test, method='brute-force')
+    
+    pd.DataFrame(I_loss).to_csv('x.csv')
+    pd.DataFrame(loo_loss).to_csv('y.csv')
+    
+    
     d = model.serialize_eval_dict(model.get_eval())
 
