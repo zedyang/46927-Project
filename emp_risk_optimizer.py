@@ -67,10 +67,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.model_name = kwargs.pop('model_name')
 
         # Initialize graph and session
-        tf.reset_default_graph()
         self.graph = tf.Graph()
         self.graph.as_default()
-        self.sess = tf.Session()
+        self.sess = None
 
         # Config
         self.trained = False
@@ -109,6 +108,21 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         __repr = self.model_name + '({})'.format(hyperparams_str)
         return __repr
 
+    def get_new_feed_dict(self, feed_data):
+        return {
+            self.X_tr: feed_data['X'],
+            self.y_tr: feed_data['y']
+        }
+
+    def get_single_elem_feed_dict(self, idx, feed_data=None):
+        if feed_data is None:
+            feed_data = self.data
+        X, y = feed_data['X'], feed_data['y']
+        return {
+            self.X_tr: X[idx:idx + 1, :],
+            self.y_tr: y[idx:idx + 1, :]
+        }
+
     def fit(self, X, y, n_iter, verbose=True, **kwargs):
         """
         Fit the model by run tensorflow session, evaluating the optimization
@@ -123,24 +137,29 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         :param kwargs:
         :return: self, the fitted model.
         """
-        self.n, self.p = X.shape
-        self.data = {'X': X, 'y': y}
-        self.X_tr = tf.placeholder(
-            tf.float32, (None, self.p), name='X_tr')
-        self.y_tr = tf.placeholder(
-            tf.float32, (None, 1), name='y_tr')
-        self.all_params = self.get_all_params()
-        self.losses, self.emp_risk = self.get_emp_risk()
-        self.train_op = self.get_op()
-        self.hessian_emp_risk = tf.hessians(
-            self.emp_risk, self.all_params, name='H_total_risk')
-        # TODO: Maybe we'll need this later?
-        # self.grad_individual = [tf.gradients(
-        #    self.losses, self.all_params)
-        #    for i in range(self.n)]
-        # tf.add_to_collection('grads', self.grad_individual)
-        self.grad_emp_risk = tf.gradients(
-            self.emp_risk, self.all_params, name='grad_total_risk')
+        if 'refit' in kwargs and kwargs.pop('refit') is True:
+            assert self.trained is True
+        else:
+            tf.reset_default_graph()
+            self.sess = tf.Session()
+            self.n, self.p = X.shape
+            self.data = {'X': X, 'y': y}
+            self.X_tr = tf.placeholder(
+                tf.float32, (None, self.p), name='X_tr')
+            self.y_tr = tf.placeholder(
+                tf.float32, (None, 1), name='y_tr')
+            self.all_params = self.get_all_params()
+            self.losses, self.emp_risk = self.get_emp_risk()
+            self.train_op = self.get_op()
+            self.hessian_emp_risk = tf.hessians(
+                self.emp_risk, self.all_params, name='H_total_risk')
+            # TODO: Maybe we'll need this later?
+            # self.grad_individual = [tf.gradients(
+            #    self.losses, self.all_params)
+            #    for i in range(self.n)]
+            # tf.add_to_collection('grads', self.grad_individual)
+            self.grad_emp_risk = tf.gradients(
+                self.emp_risk, self.all_params, name='grad_total_risk')
 
         # initialize all variables
         init = tf.global_variables_initializer()
@@ -153,7 +172,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 self.X_tr: X,
                 self.y_tr: y
             }
-            _, loss_val = self.sess.run(
+            _, emp_risk_val = self.sess.run(
                 [self.train_op, self.emp_risk],
                 feed_dict=self.feed_dict)
 
@@ -161,10 +180,33 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             if verbose:
                 if i % 1000 == 0:
                     print('Step %d: loss = %.8f (%.3f sec)' % (
-                        i, loss_val, dur_time))
+                        i, emp_risk_val, dur_time))
 
         self.trained = True
         return self
+
+    def refit_with_feed_dict(self, feed_dict, n_iter, verbose=False):
+        """
+
+        :param feed_dict:
+        :param n_iter:
+        :param verbose:
+        :return:
+        """
+        assert self.trained is True
+
+        emp_risk_val = None
+        for i in range(n_iter):
+            start_time = time.time()
+            _, emp_risk_val = self.sess.run(
+                [self.train_op, self.emp_risk],
+                feed_dict=feed_dict)
+            dur_time = time.time() - start_time
+            if verbose:
+                if i % 1000 == 0:
+                    print('Step %d: loss = %.8f (%.3f sec)' % (
+                        i, emp_risk_val, dur_time))
+        return emp_risk_val
 
     def get_op(self):
         """
@@ -368,13 +410,10 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             X_valid, y_valid = z_valid
 
             for idx in range(y_valid.shape[0]):
-                single_elem_feed_dict = {
-                    self.X_tr: X_valid[idx:idx + 1, :],
-                    self.y_tr: y_valid[idx:idx + 1, :]
-                }
                 grad_emp_risk_val = self.sess.run(
                     self.grad_emp_risk,
-                    feed_dict=single_elem_feed_dict
+                    feed_dict=self.get_single_elem_feed_dict(
+                        idx, {'X': X_valid, 'y': y_valid})
                 )
                 grads_per_elem.append(
                     np.vstack(grad_emp_risk_val))
@@ -384,13 +423,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 train_idx = range(self.n)
             start_time = time.time()
             for counter, idx in enumerate(train_idx):
-                single_elem_feed_dict = {
-                    self.X_tr: self.data['X'][idx:idx+1, :],
-                    self.y_tr: self.data['y'][idx:idx+1, :]
-                }
                 grad_emp_risk_val = self.sess.run(
                     self.grad_emp_risk,
-                    feed_dict=single_elem_feed_dict
+                    feed_dict=self.get_single_elem_feed_dict(idx)
                 )
                 grads_per_elem.append(
                     np.vstack(grad_emp_risk_val))
@@ -445,6 +480,60 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             if len(items) == 1:
                 return eval_dict[items[0]]
             return {key: eval_dict[key] for key in items}
+
+    def leave_one_out_refit(self, X_valid, y_valid,
+                            n_iter, leave_indices=None,
+                            verbose=0.1):
+        """
+
+        :param X_valid:
+        :param y_valid:
+        :param n_iter:
+        :param leave_indices:
+        :param verbose:
+        :return:
+        """
+        assert self.trained is True
+
+        # number of validation points
+        m = X_valid.shape[0]
+
+        # evaluate the validation losses with the full model
+        losses_full = self.sess.run(
+            self.losses, feed_dict=self.get_new_feed_dict(
+                {'X': X_valid, 'y': y_valid}))
+
+        if not leave_indices:
+            leave_indices = range(self.n)
+        losses_loo = np.zeros((len(leave_indices), m))
+
+        # leave-one-out refitting
+        for counter, train_idx in enumerate(leave_indices):
+            start_time = time.time()
+            rest_indices = [
+                i for i in range(self.n) if i != train_idx]
+
+            leave_one_feed_dict = {
+                self.X_tr: self.data['X'][rest_indices, :],
+                self.y_tr: self.data['y'][rest_indices, :]
+            }
+
+            emp_risk_val = self.refit_with_feed_dict(
+                leave_one_feed_dict, n_iter, verbose=(verbose >= 1))
+
+            losses_val = self.sess.run(
+                self.losses, feed_dict=self.get_new_feed_dict(
+                    {'X': X_valid, 'y': y_valid}))
+
+            losses_loo[train_idx:train_idx+1, :] = (
+                losses_full - losses_val).T
+
+            dur_time = time.time() - start_time
+            if 0 < verbose < 1:
+                if counter % int(self.n*verbose) == 0:
+                    print('LOO Fold %d: loss = %.8f (%.3f sec)' % (
+                        counter, emp_risk_val, dur_time))
+        return losses_loo
 
     @staticmethod
     def serialize_eval_dict(eval_dict, pretty=False):
@@ -544,7 +633,9 @@ if __name__ == '__main__':
         eta=0.001)
 
     model.fit(X_train, y_train, n_iter=10000)
+    #model.fit(X_train, y_train, n_iter=10000)
     I_loss = model.influence_loss(
         X_test, y_test, method='brute-force')
-    d = model.serialize_eval_dict(model.get_eval())
 
+    I_loss_loo = model.leave_one_out_refit(
+        X_test, y_test, n_iter=2000)
