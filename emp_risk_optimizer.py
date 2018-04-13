@@ -109,12 +109,23 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         return __repr
 
     def get_new_feed_dict(self, feed_data):
+        """
+        
+        :param feed_data:
+        :return:
+        """
         return {
             self.X_tr: feed_data['X'],
             self.y_tr: feed_data['y']
         }
 
     def get_single_elem_feed_dict(self, idx, feed_data=None):
+        """
+
+        :param idx:
+        :param feed_data:
+        :return:
+        """
         if feed_data is None:
             feed_data = self.data
         X, y = feed_data['X'], feed_data['y']
