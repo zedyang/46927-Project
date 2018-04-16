@@ -8,14 +8,15 @@ from lazy import lazy
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.optimize import fmin_ncg
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import array_ops, math_ops
 
 __author__ = 'zed'
-__last_update__ = '2018/04/11'
+__last_update__ = '2018/04/16'
 
 
 class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
@@ -43,12 +44,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
     to retrieve useful intermediate quantities on demands.
     """
     # TODO: Maybe an alternative constructor to build the graph before fit()?
-    # TODO: Retraining routine.
-    # TODO: Leave-One-Out routine, and comparisons.
     # TODO: A better optimization procedure, maybe mini-batch?
-    # TODO: More concrete instances, maybe 2-classes logistic regression?
+    # TODO: More concrete instances, 2-classes logistic regression?
     # TODO: Only work for (n*1) labels, should implement multi-classes case
-    # TODO: Hessian vector product calculation (QP/Taylor)
     # TODO: Should separate predict and inference for classifications.
 
     def __init__(self, **kwargs):
@@ -95,6 +93,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         self.grad_individual = None
         if self.eval_hessian:
             self.hessian_emp_risk = None
+        # hessian vector prod = Hv, v_placeholder is the placeholder for v
+        self.hessian_vector_product = None
+        self.v_placeholder = None
 
     def __repr__(self):
         """
@@ -114,10 +115,17 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         :param feed_data:
         :return:
         """
-        return {
-            self.X_tr: feed_data['X'],
-            self.y_tr: feed_data['y']
-        }
+        if 'X' in feed_data and 'y' in feed_data:
+            feed_dict = {
+                self.X_tr: feed_data['X'],
+                self.y_tr: feed_data['y']}
+        else:
+            feed_dict = {
+                self.X_tr: self.data['X'],
+                self.y_tr: self.data['y']}
+        if 'v' in feed_data and feed_data['v'] is not None:
+            feed_dict[self.v_placeholder] = feed_data['v']
+        return feed_dict
 
     def get_single_elem_feed_dict(self, idx, feed_data=None):
         """
@@ -133,6 +141,29 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.X_tr: X[idx:idx + 1, :],
             self.y_tr: y[idx:idx + 1, :]
         }
+
+    @staticmethod
+    def get_hessian_vector_product(ys, xs, v, first_grads=None, **kwargs):
+        """
+
+        :param ys:
+        :param xs:
+        :param v:
+        :param first_grads:
+        :param kwargs:
+        :return:
+        """
+        assert len(xs) == len(v)
+        if first_grads is None:
+            first_grads = tf.gradients(ys, xs)
+        grads_v_products = [
+            math_ops.multiply(grad_elem, array_ops.stop_gradient(v_elem))
+            for grad_elem, v_elem in zip(first_grads, v)
+            if grad_elem is not None
+        ]
+        name = kwargs.pop('name') if 'name' in kwargs \
+            else 'hessian_vector_product'
+        return tf.gradients(grads_v_products, xs, name=name)
 
     def fit(self, X, y, n_iter, verbose=True, **kwargs):
         """
@@ -151,26 +182,30 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         if 'refit' in kwargs and kwargs.pop('refit') is True:
             assert self.trained is True
         else:
-            tf.reset_default_graph()
+            # tf.reset_default_graph()
             self.sess = tf.Session()
             self.n, self.p = X.shape
+
             self.data = {'X': X, 'y': y}
             self.X_tr = tf.placeholder(
                 tf.float32, (None, self.p), name='X_tr')
             self.y_tr = tf.placeholder(
                 tf.float32, (None, 1), name='y_tr')
+
             self.all_params = self.get_all_params()
             self.losses, self.emp_risk = self.get_emp_risk()
             self.train_op = self.get_op()
-            self.hessian_emp_risk = tf.hessians(
-                self.emp_risk, self.all_params, name='H_total_risk')
-            # TODO: Maybe we'll need this later?
-            # self.grad_individual = [tf.gradients(
-            #    self.losses, self.all_params)
-            #    for i in range(self.n)]
-            # tf.add_to_collection('grads', self.grad_individual)
             self.grad_emp_risk = tf.gradients(
                 self.emp_risk, self.all_params, name='grad_total_risk')
+
+            if hasattr(self, 'hessian_emp_risk'):
+                self.hessian_emp_risk = tf.hessians(
+                    self.emp_risk, self.all_params, name='H_total_risk')
+            self.v_placeholder = tf.placeholder(
+                tf.float32, (None, 1), name='v')
+            self.hessian_vector_product = self.get_hessian_vector_product(
+                self.emp_risk, [self.all_params], [self.v_placeholder],
+                first_grads=self.grad_emp_risk)
 
         # initialize all variables
         init = tf.global_variables_initializer()
@@ -179,10 +214,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         # evaluation
         for i in range(n_iter):
             start_time = time.time()
-            self.feed_dict = {
-                self.X_tr: X,
-                self.y_tr: y
-            }
+            self.feed_dict = self.get_new_feed_dict({'X': X, 'y': y})
             _, emp_risk_val = self.sess.run(
                 [self.train_op, self.emp_risk],
                 feed_dict=self.feed_dict)
@@ -356,6 +388,23 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         except np.linalg.LinAlgError as e:
             print(str(e))
 
+    def eval_hvp(self, v, concat=True):
+        """
+
+        :param v:
+        :param concat:
+        :return:
+        """
+        if v.ndim == 1:
+            v = v.reshape((v.shape[0], 1))
+        feed_dict = self.get_new_feed_dict({'v': v})
+        hessian_vector_product_val = self.sess.run(
+            self.hessian_vector_product, feed_dict=feed_dict)
+        if concat:
+            hessian_vector_product_val = np.concatenate(
+                hessian_vector_product_val, axis=0)
+        return hessian_vector_product_val
+
     def influence_params(self, method):
         """
         Compute every training points' influence to parameters.
@@ -386,18 +435,63 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                  to the j-th validation point.
         """
         assert self.trained is True
-        if method == 'brute-force':
-            H_inv = self.inv_hessian
-            grads_train_elems = self.get_per_elem_gradients()
-            U = np.stack(grads_train_elems, axis=1)
-            grads_valid_elems = self.get_per_elem_gradients(
-                z_valid=(X_valid, y_valid))
-            influence_loss_val = np.zeros((self.n, X_valid.shape[0]))
-            for idx, v in enumerate(grads_valid_elems):
-                hvp = H_inv.dot(v)
-                I_loss_z = U.T.dot(hvp)
-                influence_loss_val[:, idx:idx+1] = I_loss_z
-            return influence_loss_val
+
+        grads_train_elems = self.get_per_elem_gradients()
+        U = np.stack(grads_train_elems, axis=1)
+        grads_valid_elems = self.get_per_elem_gradients(
+            z_valid=(X_valid, y_valid))
+        influence_loss_val = np.zeros((self.n, X_valid.shape[0]))
+
+        for idx, v in enumerate(grads_valid_elems):
+            if method == 'brute-force':
+                H_inv = self.inv_hessian
+                # this is a dim-2 (p*1) np.ndarray
+                inverse_hvp = H_inv.dot(v)
+            elif method == 'cg':
+                # this is a dim-1 (p,) np.array
+                inverse_hvp = self.get_inverse_hvp_cg(v)
+                inverse_hvp = np.array(
+                    inverse_hvp).reshape((self.n_params, 1))
+            else:
+                raise ValueError
+            I_loss_z = U.T.dot(inverse_hvp)
+            influence_loss_val[:, idx:idx + 1] = I_loss_z
+        return influence_loss_val
+
+    def get_inverse_hvp_cg(self, v):
+        """
+
+        :param v:
+        :return:
+        """
+        def __cg_objective(x):
+            Hx = self.eval_hvp(x)
+            obj = np.multiply(0.5, x.T.dot(Hx)) - v.T.dot(x)
+            # d0, = obj.shape
+            return obj
+
+        def __cg_grad(x):
+            Hx = self.eval_hvp(x)
+            d0, d1 = Hx.shape
+            return (Hx - v).reshape((d0*d1,))
+
+        def __cg_fHess_p(x, p):
+            Hp = self.eval_hvp(p)
+            d0, d1 = Hp.shape
+            return Hp.reshape((d0*d1,))
+
+        def __cg_callback(x):
+            print('CG Objective: %s' % __cg_objective(x)[0])
+
+        cg_min_results = fmin_ncg(
+            f=__cg_objective,
+            x0=np.concatenate(v),
+            fprime=__cg_grad,
+            fhess_p=__cg_fHess_p,
+            callback=__cg_callback,
+            avextol=1e-5,
+            maxiter=1000)
+        return cg_min_results
 
     def get_per_elem_gradients(self, train_idx=None, **kwargs):
         """
@@ -410,7 +504,8 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             - z_valid: tuple of two 2-dim np.ndarray.
               The validation data. If specified, calculate per element
               gradient with respect to parameters on the validation set.
-        :return:
+        :return: A list of (p * 1) np.ndarray objects, (list len is m)
+            p is the total number of params; m is the number of elements.
         """
         assert self.trained is True
         grads_per_elem = []
@@ -646,7 +741,8 @@ if __name__ == '__main__':
     model.fit(X_train, y_train, n_iter=10000)
     #model.fit(X_train, y_train, n_iter=10000)
     I_loss = model.influence_loss(
-        X_test, y_test, method='brute-force')
+        X_test, y_test, method='cg')
 
-    I_loss_loo = model.leave_one_out_refit(
-        X_test, y_test, n_iter=2000)
+    g_test = model.get_per_elem_gradients(z_valid=(X_test, y_test))
+    #I_loss_loo = model.leave_one_out_refit(
+    #    X_test, y_test, n_iter=2000)
