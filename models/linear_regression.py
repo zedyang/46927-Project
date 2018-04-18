@@ -49,5 +49,6 @@ class LinearRegression2Blocks(EmpiricalRiskOptimizer):
         return losses, emp_risk
 
     def predict(self, X_test):
-        beta = self.get_eval(all_eval=False)
-        return X_test.dot(beta)
+        params = self.get_eval(items=['params'])
+        beta1, beta2 = params['beta_block1'], params['beta_block2']
+        return X_test.dot(np.vstack((beta1, beta2)))
