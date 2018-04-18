@@ -81,9 +81,9 @@ class SupportVectorMachine(EmpiricalRiskOptimizer):
         return np.sign(X_test.dot(beta))
 
 if __name__ == '__main__':
-    df = pd.read_csv('../data/svm_10.csv')
+    df = pd.read_csv('../data/digit_04.csv')
     n = len(df)
-    X = df.values[:, 0:10]
+    X = df.values[:, 0:256]
     y = df.values[:, -1].reshape(n, 1)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42)
