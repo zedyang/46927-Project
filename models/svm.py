@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
-import numpy as np
 import pandas as pd
 from influence.emp_risk_optimizer import EmpiricalRiskOptimizer
 from sklearn.model_selection import train_test_split
+
 
 class SupportVectorMachine(EmpiricalRiskOptimizer):
 
@@ -34,7 +34,8 @@ class SupportVectorMachine(EmpiricalRiskOptimizer):
         b = self.all_params_dict['beta']
 
         # x_dot_beta
-        x_dot_beta = tf.matmul(self.X_tr[:, 0:self.p1], b, name='x_dot_beta')
+        x_dot_beta = tf.matmul(
+            self.X_input[:, 0:self.p1], b, name='x_dot_beta')
 
         # L2 loss
         L2_loss = tf.reduce_sum(tf.multiply(b, b), name='L2_loss')
@@ -43,21 +44,23 @@ class SupportVectorMachine(EmpiricalRiskOptimizer):
         hinge_loss = tf.subtract(
             tf.constant(1.0),
             tf.multiply(
-                self.y_tr,
-                x_dot_beta
-            )
-        , name='hinge_loss')
+                self.y_input,
+                x_dot_beta),
+            name='hinge_loss')
 
         # smooth hinge
         t = tf.constant(self.t, name='t')
-        smooth_hinge = tf.multiply(t,
-            tf.log(
-                tf.constant(1.0) + tf.exp((tf.constant(1.0)-tf.reduce_sum(tf.multiply(self.y_tr, x_dot_beta)))/t)
-        ), name='smooth_hinge')
+        smooth_hinge = tf.multiply(
+            t, tf.log(tf.constant(1.0) + tf.exp(
+                (tf.constant(1.0) - tf.reduce_sum(
+                    tf.multiply(self.y_input, x_dot_beta))) / t)),
+            name='smooth_hinge')
 
         # must return individual losses and total empirical risk
-        losses = tf.add(smooth_hinge,
-                        tf.multiply(self.C, L2_loss), name = 'total_loss')
+        losses = tf.add(
+            smooth_hinge,
+            tf.multiply(self.C, L2_loss),
+            name='total_loss')
         emp_risk = tf.reduce_mean(losses, name='emp_risk')
         return losses, emp_risk
 
@@ -79,8 +82,8 @@ if __name__ == '__main__':
     model = SupportVectorMachine(
         model_name='SVM',
         eta=0.01,
-        C = 0.1,
-        t = 0.1
+        C=0.1,
+        t=0.1
     )
     model.fit(X_train, y_train, n_iter=10000)
     y_hat = model.predict(X_train)

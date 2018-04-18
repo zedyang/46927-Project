@@ -38,13 +38,13 @@ class LinearRegression2Blocks(EmpiricalRiskOptimizer):
 
         # y_hat
         y_hat = tf.add(
-            tf.matmul(self.X_tr[:, 0:self.p1], b1, name='block1'),
-            tf.matmul(self.X_tr[:, self.p1:self.p], b2, name='block2'),
+            tf.matmul(self.X_input[:, 0:self.p1], b1, name='block1'),
+            tf.matmul(self.X_input[:, self.p1:self.p], b2, name='block2'),
             name='y_hat'
         )
 
         # must return individual losses and total empirical risk
-        losses = tf.pow(self.y_tr - y_hat, 2, name='l2_loss')
+        losses = tf.pow(self.y_input - y_hat, 2, name='l2_loss')
         emp_risk = tf.reduce_mean(losses, name='emp_risk')
         return losses, emp_risk
 

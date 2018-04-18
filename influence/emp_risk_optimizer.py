@@ -84,8 +84,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         self.all_params_dict, self.all_params = OrderedDict(), None
         # self.all_params_dict contains structured params for convenience
         # self.all_params is a flat (p*1) container that stacks all params
-        self.X_tr, self.y_tr = None, None
-        self.X_te, self.y_te = None, None
+        self.X_input, self.y_input = None, None
         self.feed_dict = None
         self.emp_risk, self.losses = None, None
         self.train_op = None
@@ -117,12 +116,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         """
         if 'X' in feed_data and 'y' in feed_data:
             feed_dict = {
-                self.X_tr: feed_data['X'],
-                self.y_tr: feed_data['y']}
+                self.X_input: feed_data['X'],
+                self.y_input: feed_data['y']}
         else:
             feed_dict = {
-                self.X_tr: self.data['X'],
-                self.y_tr: self.data['y']}
+                self.X_input: self.data['X'],
+                self.y_input: self.data['y']}
         if 'v' in feed_data and feed_data['v'] is not None:
             feed_dict[self.v_placeholder] = feed_data['v']
         return feed_dict
@@ -138,8 +137,8 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             feed_data = self.data
         X, y = feed_data['X'], feed_data['y']
         return {
-            self.X_tr: X[idx:idx + 1, :],
-            self.y_tr: y[idx:idx + 1, :]
+            self.X_input: X[idx:idx + 1, :],
+            self.y_input: y[idx:idx + 1, :]
         }
 
     @staticmethod
@@ -187,10 +186,10 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.n, self.p = X.shape
 
             self.data = {'X': X, 'y': y}
-            self.X_tr = tf.placeholder(
-                tf.float32, (None, self.p), name='X_tr')
-            self.y_tr = tf.placeholder(
-                tf.float32, (None, 1), name='y_tr')
+            self.X_input = tf.placeholder(
+                tf.float32, (None, self.p), name='X_input')
+            self.y_input = tf.placeholder(
+                tf.float32, (None, 1), name='y_input')
 
             self.all_params = self.get_all_params()
             self.losses, self.emp_risk = self.get_emp_risk()
@@ -325,7 +324,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                     y: G classes, one-hot labels.
 
                  One has access to retrieve training data with
-                 self.X_tr and self.y_tr; and the parameters
+                 self.X_input and self.y_input; and the parameters
                  self.all_params_dict[name] or self.all_params[position]
                  as specified in get_all_params method.
 
@@ -620,8 +619,8 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 i for i in range(self.n) if i != train_idx]
 
             leave_one_feed_dict = {
-                self.X_tr: self.data['X'][rest_indices, :],
-                self.y_tr: self.data['y'][rest_indices, :]
+                self.X_input: self.data['X'][rest_indices, :],
+                self.y_input: self.data['y'][rest_indices, :]
             }
 
             emp_risk_val = self.refit_with_feed_dict(
