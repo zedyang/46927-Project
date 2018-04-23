@@ -14,7 +14,7 @@ import matplotlib
 data = pd.read_csv('revised marketing.csv')
 X=pd.get_dummies(data.iloc[:,0:8])
 y=np.array(data['y'])
-lmfit = LogisticRegression(C=1000000).fit(X, y)
+lmfit = LogisticRegression(C=1000000).fit(X.loc[1:], y[1:])
 theta = lmfit.coef_.T
 X=np.array(X.T)
 X_test,y_test = X[:,0],y[0]
