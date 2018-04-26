@@ -5,15 +5,28 @@
 
 **Authors:** Ze Yang, Zhengyang Qi, Yundong Liu, Yuze Liu
 
+## Experiments
+
+- `experiments.ipynb`: Ridge on *ForestFires* dataset.
+- `experiments2.ipynb`: Binary Logistic Regression on *Iris* and *MNIST*.
+- `experiments3.ipynb`: Smoothed support vector on *Iris*.
+- `experiments4.ipynb`: Analysis of the components of loss influence function, using *Marketing* dataset.
+
+## Data
+
+- *ForestFires*, *Iris*, *MNIST*, *Marketing*: See `/data/__init__.py`
+
+
 ## TODO
 
-- Logistic Regression influence terms illustration
-- Implement Binary Logistic Regression
-- Implement Smoothed SVC
-- Implement Regularized Regression
+- Logistic Regression influence terms illustration **(Done)**
+- Implement Binary Logistic Regression **(Done)**
+- Implement Smoothed SVC **(Done)**
+- Implement Regularized Regression **(Done)**
 - Implement 2-Layers Perceptron
 - Conjugate Gradient approximation **(Done)**
 - LiSSA approximation [(2)][2]
+- Improve Optimization Routine **(Done)**
 
 ## Introduction
 

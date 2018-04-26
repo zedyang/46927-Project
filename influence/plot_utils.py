@@ -5,6 +5,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
+import seaborn as sns
 import PIL.Image
 from IPython.display import clear_output, Image, display, HTML
 
@@ -12,9 +13,37 @@ import tensorflow as tf
 
 
 # TODO: 那个"左右连线"的图，换model看influence怎么变
-# TODO: LOO v.s. Influence
-# TODO: brute-force v.s. approx
 #
+
+def compare_with_loo(influences, loo_diff, n_samples,
+                     method_names=('brute-force', 'cg')):
+    n_methods = len(influences)
+    fig, axes = plt.subplots(2, n_methods, figsize=(n_methods*5, 10))
+    leave_tr, n_te = influences[0].shape
+    # frame_trunc = np.percentile(loo_diff, trunc)
+
+    for m in range(n_methods):
+        for j in range(n_te):
+            axes[0, m].plot(
+                influences[m][:, j]/n_samples,
+                loo_diff[:, j], 'o', color='black')
+            axes[1, m].plot(
+                influences[m][:, j]/n_samples,
+                loo_diff[:, j] + j, 'o')
+
+        axes[0, m].update({
+            'title': 'Influence {} V.S. Numerical LOO'.format(method_names[m]),
+            'xlabel': 'Influence I_loss/-n',
+            'ylabel': 'Numerical LOO'
+            # 'xlim': (-frame_trunc, frame_trunc),
+            # 'ylim': (-frame_trunc, frame_trunc)
+        })
+
+        axes[1, m].update({
+            'title': 'Colored & Translated by different Validation Points',
+            'yticks': []})
+    return fig, axes
+
 
 def strip_consts(graph_def, max_const_size=32):
     """

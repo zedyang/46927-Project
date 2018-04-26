@@ -1,5 +1,4 @@
-import abc
-import sys
+import os
 import time
 import json
 from collections import OrderedDict
@@ -7,7 +6,6 @@ from lazy import lazy
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 from scipy.optimize import fmin_ncg
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split
@@ -16,7 +14,7 @@ import tensorflow as tf
 from tensorflow.python.ops import array_ops, math_ops
 
 __author__ = 'zed'
-__last_update__ = '2018/04/16'
+__last_update__ = '2018/04/22'
 
 
 class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
@@ -43,10 +41,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
     The base class also implements get_eval(all_eval=True, **kwargs) method
     to retrieve useful intermediate quantities on demands.
     """
-    # TODO: Maybe an alternative constructor to build the graph before fit()?
+
     # TODO: A better optimization procedure, maybe mini-batch?
-    # TODO: More concrete instances, 2-classes logistic regression?
-    # TODO: Only work for (n*1) labels, should implement multi-classes case
+    # TODO: Only work for (n_samples*1) labels, implement multi-classes case
     # TODO: Should separate predict and inference for classifications.
 
     def __init__(self, **kwargs):
@@ -57,37 +54,56 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         (mostly) initialized in the fit(X, y) method.
         :param kwargs:
             - 'model_name': the label of model, will appear in __repr__.
-            - 'eta': learning rate.
+            - 'eta': float, initial learning rate.
+            - 'batch_size': int, size of a minibatch.
+            - 'decay_epochs': list of ints,
+               the epochs to apply learning rate decay.
             - other hyperparameters for concrete models.
         """
         self.model_name = 'EmpiricalRiskOptimizer'
         if 'model_name' in kwargs:
             self.model_name = kwargs.pop('model_name')
+        self.checkpoint_file = os.path.join(
+            'output',
+            "%s-checkpoint" % self.model_name)
 
         # Initialize graph and session
         self.graph = tf.Graph()
         self.graph.as_default()
         self.sess = None
+        self.saver = None
 
         # Config
         self.trained = False
         self.eval_hessian = True
 
         # Hyperparams
-        self.eta = kwargs.pop('eta')
-        self.n, self.p = None, None
-        self.hyperparams = ['eta'] # for __repr__
+        self.init_eta = kwargs.pop('init_eta')
+        self.batch_size = kwargs.pop('batch_size')
+        self.decay_epochs = kwargs.pop('decay_epochs')
+        self.n_samples, self.n_features = None, None
+        self.hyperparams = ['init_eta', 'batch_size', 'decay_epochs']
+        # for __repr__
 
         # Variables and Inputs
         self.data = None
+        self._data_batch = None
+        self._idx_in_epoch = 0
+        self.global_step = None
+        self.adaptive_eta = None
+        self.eta_input, self.eta_assign = None, None
         self.n_params = None
         self.all_params_dict, self.all_params = OrderedDict(), None
+        self.all_params_assign, self.all_params_input = None, None
         # self.all_params_dict contains structured params for convenience
-        # self.all_params is a flat (p*1) container that stacks all params
+        # self.all_params is a flat
+        # (n_features*1) container that stacks all params
         self.X_input, self.y_input = None, None
-        self.feed_dict = None
+
+        # Fitting
         self.emp_risk, self.losses = None, None
-        self.train_op = None
+        self.train_op_adam = None
+        self.train_op_sgd = None
         self.grad_emp_risk = None
         self.grad_individual = None
         if self.eval_hessian:
@@ -95,6 +111,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         # hessian vector prod = Hv, v_placeholder is the placeholder for v
         self.hessian_vector_product = None
         self.v_placeholder = None
+        self.sklearn_clf = None
 
     def __repr__(self):
         """
@@ -110,7 +127,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
 
     def get_new_feed_dict(self, feed_data):
         """
-        
+
         :param feed_data:
         :return:
         """
@@ -141,30 +158,57 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.y_input: y[idx:idx + 1, :]
         }
 
-    @staticmethod
-    def get_hessian_vector_product(ys, xs, v, first_grads=None, **kwargs):
-        """
+    def get_batch_feed_dict(self):
+        assert self.batch_size <= self.n_samples
+        start = self._idx_in_epoch
+        self._idx_in_epoch += self.batch_size
+        # if used for one pass, re-shuffle the data
+        if self._idx_in_epoch > self.n_samples:
+            perm = np.arange(self.n_samples)
+            np.random.shuffle(perm)
+            self._data_batch = {
+                'X': self._data_batch['X'][perm, :],
+                'y': self._data_batch['y'][perm, :]
+            }
+            start = 0
+            self._idx_in_epoch = self.batch_size
+        end = self._idx_in_epoch
+        return {
+            self.X_input: self._data_batch['X'][start:end],
+            self.y_input: self._data_batch['y'][start:end]
+        }
 
-        :param ys:
-        :param xs:
-        :param v:
-        :param first_grads:
-        :param kwargs:
+    def load(self, iter_to_load):
+        checkpoint = "%s-%s" % (self.checkpoint_file, iter_to_load)
+        self.saver.restore(self.sess, checkpoint)
+
+    def update_eta(self, current_iter):
+        """
+        Shrink eta while going deep into high iterations.
+        :param current_iter:
         :return:
         """
-        assert len(xs) == len(v)
-        if first_grads is None:
-            first_grads = tf.gradients(ys, xs)
-        grads_v_products = [
-            math_ops.multiply(grad_elem, array_ops.stop_gradient(v_elem))
-            for grad_elem, v_elem in zip(first_grads, v)
-            if grad_elem is not None
-        ]
-        name = kwargs.pop('name') if 'name' in kwargs \
-            else 'hessian_vector_product'
-        return tf.gradients(grads_v_products, xs, name=name)
+        assert self.n_samples % self.batch_size
+        n_iters_in_epoch = self.n_samples / self.batch_size
+        current_epoch = current_iter // n_iters_in_epoch
+        decay = 1
+        if current_epoch < self.decay_epochs[0]:
+            decay = 1
+        elif current_epoch < self.decay_epochs[1]:
+            decay = 0.1
+        else:
+            decay = 0.01
+        self.sess.run(
+            self.eta_assign,
+            feed_dict={self.eta_input: decay*self.init_eta}
+        )
+        return decay, current_epoch
 
-    def fit(self, X, y, n_iter, verbose=True, **kwargs):
+    def fit(self, X, y, n_iter,
+            iter_to_switch_off_minibatch=20000,
+            iter_to_switch_to_sgd=40000,
+            verbose=True, show_eval=True,
+            lazy=False, **kwargs):
         """
         Fit the model by run tensorflow session, evaluating the optimization
         operation. All tensorflow objects are initialized here.
@@ -174,7 +218,11 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         :param X: 2-dim np.ndarray, training feature.
         :param y: 2-dim np.ndarray, training labels.
         :param n_iter: int, number of iterations for optimization procedure.
+        :param iter_to_switch_off_minibatch: int
+        :param iter_to_switch_to_sgd: int
         :param verbose: bool, whether to print the process.
+        :param show_eval: bool, whether to show evaluation upon completion.
+        :param lazy: bool, whether to fit now or just initialize containers.
         :param kwargs:
         :return: self, the fitted model.
         """
@@ -183,20 +231,34 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         else:
             # tf.reset_default_graph()
             self.sess = tf.Session()
-            self.n, self.p = X.shape
 
+            # data and minibatch utils
+            self.n_samples, self.n_features = X.shape
             self.data = {'X': X, 'y': y}
+            self._data_batch = {'X': np.copy(X), 'y': np.copy(y)}
             self.X_input = tf.placeholder(
-                tf.float32, (None, self.p), name='X_input')
+                tf.float32, (None, self.n_features), name='X_input')
             self.y_input = tf.placeholder(
                 tf.float32, (None, 1), name='y_input')
+            self.global_step = tf.Variable(
+                0, name='batch_counter', trainable=False)
 
+            # training operations & utils
+            self.adaptive_eta = tf.Variable(
+                0.0, name='batch_counter', trainable=False, dtype=tf.float32)
+            self.eta_input = tf.placeholder(tf.float32)
+            self.eta_assign = tf.assign(self.adaptive_eta, self.eta_input)
             self.all_params = self.get_all_params()
+            self.all_params_input = tf.placeholder(
+                tf.float32, (self.n_params, 1), name='params_input')
+            self.all_params_assign = tf.assign(
+                self.all_params, self.all_params_input)
             self.losses, self.emp_risk = self.get_emp_risk()
-            self.train_op = self.get_op()
+            self.train_op_adam, self.train_op_sgd = self.get_train_op()
+
+            # gradients, hessian, and hvp.
             self.grad_emp_risk = tf.gradients(
                 self.emp_risk, self.all_params, name='grad_total_risk')
-
             if hasattr(self, 'hessian_emp_risk'):
                 self.hessian_emp_risk = tf.hessians(
                     self.emp_risk, self.all_params, name='H_total_risk')
@@ -206,42 +268,82 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 self.emp_risk, [self.all_params], [self.v_placeholder],
                 first_grads=self.grad_emp_risk)
 
+            # misc
+            self.saver = tf.train.Saver()
+        if 'traceback_checkpoint' in kwargs:
+            traceback_checkpoint = kwargs.pop('traceback_checkpoint')
+        else:
+            traceback_checkpoint = n_iter
+
         # initialize all variables
         init = tf.global_variables_initializer()
         self.sess.run(init)
 
         # evaluation
-        for i in range(n_iter):
-            start_time = time.time()
-            self.feed_dict = self.get_new_feed_dict({'X': X, 'y': y})
-            _, emp_risk_val = self.sess.run(
-                [self.train_op, self.emp_risk],
-                feed_dict=self.feed_dict)
+        if not lazy:
+            for i in range(n_iter):
+                start_time = time.time()
+                _, epoch = self.update_eta(current_iter=i)
 
-            dur_time = time.time() - start_time
-            if verbose:
-                if i % 1000 == 0:
-                    print('Step %d: loss = %.8f (%.3f sec)' % (
-                        i, emp_risk_val, dur_time))
+                if i < iter_to_switch_off_minibatch:
+                    feed_dict = self.get_batch_feed_dict()
+                    _, emp_risk_val = self.sess.run(
+                        [self.train_op_adam, self.emp_risk],
+                        feed_dict=feed_dict)
 
-        self.trained = True
+                elif i < iter_to_switch_to_sgd:
+                    feed_dict = self.get_new_feed_dict(self.data)
+                    _, emp_risk_val = self.sess.run(
+                        [self.train_op_adam, self.emp_risk],
+                        feed_dict=feed_dict)
+
+                else:
+                    feed_dict = self.get_new_feed_dict(self.data)
+                    _, emp_risk_val = self.sess.run(
+                        [self.train_op_sgd, self.emp_risk],
+                        feed_dict=feed_dict)
+
+                dur_time = time.time() - start_time
+                if verbose:
+                    if i % int(1000 / verbose) == 0:
+                        print('Step %d, Epoch %d: loss = %.8f (%.3f sec)' % (
+                            i, epoch, emp_risk_val, dur_time))
+
+                # checkpoint
+                if (i + 1) % 100000 == 0 or (
+                            (i + 1) == traceback_checkpoint) or (
+                            (i + 1) == n_iter):
+                    self.saver.save(
+                        self.sess, self.checkpoint_file, global_step=i)
+
+            self.trained = True
+            if show_eval:
+                self.show_eval()
         return self
 
-    def refit_with_feed_dict(self, feed_dict, n_iter, verbose=False):
+    def refit_with_feed_dict(self, feed_dict, n_iter,
+                             force_restart=False, verbose=False):
         """
+
 
         :param feed_dict:
         :param n_iter:
+        :param force_restart:
         :param verbose:
         :return:
         """
         assert self.trained is True
 
         emp_risk_val = None
+        if force_restart:
+            # force to reinitialize all variables
+            init = tf.global_variables_initializer()
+            self.sess.run(init)
+
         for i in range(n_iter):
             start_time = time.time()
             _, emp_risk_val = self.sess.run(
-                [self.train_op, self.emp_risk],
+                [self.train_op_adam, self.emp_risk],
                 feed_dict=feed_dict)
             dur_time = time.time() - start_time
             if verbose:
@@ -250,7 +352,24 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                         i, emp_risk_val, dur_time))
         return emp_risk_val
 
-    def get_op(self):
+    def fit_with_sklearn(self, **kwargs):
+        """
+
+        :param kwargs:
+        :return:
+        """
+        raise NotImplementedError
+
+    def refit_with_sklearn(self, feed_dict, **kwargs):
+        """
+
+        :param feed_dict:
+        :param kwargs:
+        :return:
+        """
+        raise NotImplementedError
+
+    def get_train_op(self):
         """
         Build the optimizer and optimization operation.
         Can not execute if self.emp_risk has not been initialized.
@@ -258,10 +377,15 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         """
         # TODO: A better optimization procedure, with mini-batch, etc.
         assert self.emp_risk is not None
-        optimizer = tf.train.GradientDescentOptimizer(
-            learning_rate=self.eta, name='GD')
-        train_op = optimizer.minimize(self.emp_risk)
-        return train_op
+        adam_optimizer = tf.train.AdamOptimizer(
+            learning_rate=self.adaptive_eta, name='Adam')
+        gd_optimizer = tf.train.GradientDescentOptimizer(
+            learning_rate=self.adaptive_eta, name='GD')
+        train_op_gd = gd_optimizer.minimize(
+            self.emp_risk, global_step=self.global_step)
+        train_op_adam = adam_optimizer.minimize(
+            self.emp_risk, global_step=self.global_step)
+        return train_op_adam, train_op_gd
 
     def get_all_params(self):
         """
@@ -315,11 +439,11 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
 
             - 1. The loss tensor L(X, y; params)
                  For Regression:
-                 L: R(n*p) * R(n*1) -> R(n*1)
+                 L: R(n_samples*n_features) * R(n_samples*1) -> R(n_samples*1)
                     (X, y) -> L(X, y; params)
 
                  For Multi-labels Classification:
-                 L: R(n*p) * R(n*G) -> R(n*G)
+                 L: R(n_samples*n_features) * R(n_samples*G) -> R(n_samples*G)
                     (X, y) -> L(X, y; params)
                     y: G classes, one-hot labels.
 
@@ -371,6 +495,29 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.fit(X, y, **fit_params)
             return self.predict(X)
 
+    @staticmethod
+    def get_hessian_vector_product(ys, xs, v, first_grads=None, **kwargs):
+        """
+
+        :param ys:
+        :param xs:
+        :param v:
+        :param first_grads:
+        :param kwargs:
+        :return:
+        """
+        assert len(xs) == len(v)
+        if first_grads is None:
+            first_grads = tf.gradients(ys, xs)
+        grads_v_products = [
+            math_ops.multiply(grad_elem, array_ops.stop_gradient(v_elem))
+            for grad_elem, v_elem in zip(first_grads, v)
+            if grad_elem is not None
+        ]
+        name = kwargs.pop('name') if 'name' in kwargs \
+            else 'hessian_vector_product'
+        return tf.gradients(grads_v_products, xs, name=name)
+
     @lazy
     def inv_hessian(self):
         """
@@ -410,9 +557,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         :param method: string, the method to be adopted.
             - 'brute-force': Explicitly calculate H^-1 grad(L(z))
                for every training point z.
-        :return: a list of n 2-dim np.ndarray with shape (self.n_params, 1).
-                 The i-th item is the i-th training point's influence to
-                 all parameters.
+        :return: a list of n_samples 2-dim np.ndarray with shape
+                 (self.n_params, 1). The i-th item is the i-th
+                 training point's influence to all parameters.
         """
         assert self.trained is True
         if method == 'brute-force':
@@ -420,7 +567,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             grads_train_elems = self.get_per_elem_gradients()
             return [H_inv.dot(v) for v in grads_train_elems]
 
-    def influence_loss(self, X_valid, y_valid, method):
+    def influence_loss(self, X_valid, y_valid, method, **kwargs):
         """
         Compute every training points' influence to every validation points.
         :param X_valid: 2-dim np.ndarray, validation features.
@@ -439,16 +586,22 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         U = np.stack(grads_train_elems, axis=1)
         grads_valid_elems = self.get_per_elem_gradients(
             z_valid=(X_valid, y_valid))
-        influence_loss_val = np.zeros((self.n, X_valid.shape[0]))
+        influence_loss_val = np.zeros((self.n_samples, X_valid.shape[0]))
 
         for idx, v in enumerate(grads_valid_elems):
             if method == 'brute-force':
                 H_inv = self.inv_hessian
-                # this is a dim-2 (p*1) np.ndarray
+                # this is a dim-2 (n_features*1) np.ndarray
                 inverse_hvp = H_inv.dot(v)
             elif method == 'cg':
-                # this is a dim-1 (p,) np.array
-                inverse_hvp = self.get_inverse_hvp_cg(v)
+                # this is a dim-1 (n_features,) np.array
+                tol, max_iter = 1e-5, 1000
+                if 'tol' in kwargs:
+                    tol = kwargs['tol']
+                if 'max_iter' in kwargs:
+                    max_iter = kwargs['max_iter']
+                inverse_hvp = self.get_inverse_hvp_cg(
+                    v, tol=tol, max_iter=max_iter)
                 inverse_hvp = np.array(
                     inverse_hvp).reshape((self.n_params, 1))
             else:
@@ -457,12 +610,15 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             influence_loss_val[:, idx:idx + 1] = I_loss_z
         return influence_loss_val
 
-    def get_inverse_hvp_cg(self, v):
+    def get_inverse_hvp_cg(self, v, tol=1e-5, max_iter=1000):
         """
 
         :param v:
+        :param tol:
+        :param max_iter:
         :return:
         """
+
         def __cg_objective(x):
             Hx = self.eval_hvp(x)
             obj = np.multiply(0.5, x.T.dot(Hx)) - v.T.dot(x)
@@ -472,12 +628,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         def __cg_grad(x):
             Hx = self.eval_hvp(x)
             d0, d1 = Hx.shape
-            return (Hx - v).reshape((d0*d1,))
+            return (Hx - v).reshape((d0 * d1,))
 
         def __cg_fHess_p(x, p):
             Hp = self.eval_hvp(p)
             d0, d1 = Hp.shape
-            return Hp.reshape((d0*d1,))
+            return Hp.reshape((d0 * d1,))
 
         def __cg_callback(x):
             print('CG Objective: %s' % __cg_objective(x)[0])
@@ -487,9 +643,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             x0=np.concatenate(v),
             fprime=__cg_grad,
             fhess_p=__cg_fHess_p,
-            callback=__cg_callback,
-            avextol=1e-5,
-            maxiter=1000)
+            # callback=__cg_callback,
+            avextol=tol,
+            maxiter=max_iter)
         return cg_min_results
 
     def get_per_elem_gradients(self, train_idx=None, **kwargs):
@@ -503,8 +659,9 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             - z_valid: tuple of two 2-dim np.ndarray.
               The validation data. If specified, calculate per element
               gradient with respect to parameters on the validation set.
-        :return: A list of (p * 1) np.ndarray objects, (list len is m)
-            p is the total number of params; m is the number of elements.
+        :return: A list of (n_features * 1) np.ndarray objects, (list len is m)
+            n_features is the total number of params;
+            m is the number of elements.
         """
         assert self.trained is True
         grads_per_elem = []
@@ -525,7 +682,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         else:
             # evaluate gradients for training points
             if not train_idx:
-                train_idx = range(self.n)
+                train_idx = range(self.n_samples)
             start_time = time.time()
             for counter, idx in enumerate(train_idx):
                 grad_emp_risk_val = self.sess.run(
@@ -549,17 +706,18 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         :return:
         """
         assert self.trained is True
+        feed_dict = self.get_new_feed_dict(self.data)
         all_params_blocks = self.sess.run(
             list(self.all_params_dict.values()),
-            feed_dict=self.feed_dict
+            feed_dict=feed_dict
         )
         losses_val, emp_risk_val = self.sess.run(
             [self.losses, self.emp_risk],
-            feed_dict=self.feed_dict
+            feed_dict=feed_dict
         )
         grad_loss_val, hessian_loss_val = self.sess.run(
             [self.grad_emp_risk, self.hessian_emp_risk],
-            feed_dict=self.feed_dict
+            feed_dict=feed_dict
         )
         params = {key: val for key, val in zip(
             self.all_params_dict.keys(), all_params_blocks)}
@@ -586,18 +744,36 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 return eval_dict[items[0]]
             return {key: eval_dict[key] for key in items}
 
+    def show_eval(self):
+        assert self.trained is True
+        evals = self.get_eval(
+            items=['params_flat', 'emp_risk', 'grads_stacked'])
+        params_ = evals['params_flat']
+        emp_risk_ = evals['emp_risk']
+        grads_ = evals['grads_stacked']
+        print("\nModel Evaluations:")
+        print("------------------------------------------")
+        print("Empirical Risk: %.6f" % emp_risk_)
+        print("Norm of Params: %.6f" % np.linalg.norm(params_))
+        print("Norm of Gradient: %.6f" % np.linalg.norm(grads_))
+
     def leave_one_out_refit(self, X_valid, y_valid,
-                            n_iter, leave_indices=None,
-                            verbose=0.1):
+                            n_iter, iter_to_load, leave_indices=None,
+                            verbose=0.1, force_restart=False,
+                            sklearn_refit=False):
         """
 
         :param X_valid:
         :param y_valid:
         :param n_iter:
+        :param iter_to_load:
         :param leave_indices:
         :param verbose:
+        :param force_restart:
+        :param sklearn_refit:
         :return:
         """
+        # at the entry point, the model should be trained
         assert self.trained is True
 
         # number of validation points
@@ -608,36 +784,53 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.losses, feed_dict=self.get_new_feed_dict(
                 {'X': X_valid, 'y': y_valid}))
 
-        if not leave_indices:
-            leave_indices = range(self.n)
+        if leave_indices is None:
+            leave_indices = range(self.n_samples)
         losses_loo = np.zeros((len(leave_indices), m))
 
         # leave-one-out refitting
-        for counter, train_idx in enumerate(leave_indices):
+        # restore the trained/partially trained model
+        if not sklearn_refit:
+            self.load(iter_to_load=iter_to_load)
+        for counter, idx_to_remove in enumerate(leave_indices):
             start_time = time.time()
-            rest_indices = [
-                i for i in range(self.n) if i != train_idx]
+            rest_indices = np.array([True]*self.n_samples, dtype=bool)
+            rest_indices[idx_to_remove] = False
 
             leave_one_feed_dict = {
                 self.X_input: self.data['X'][rest_indices, :],
                 self.y_input: self.data['y'][rest_indices, :]
             }
 
-            emp_risk_val = self.refit_with_feed_dict(
-                leave_one_feed_dict, n_iter, verbose=(verbose >= 1))
+            if sklearn_refit:
+                # refit with sklearn estimator
+                self.refit_with_sklearn(
+                    feed_dict=leave_one_feed_dict)
+                emp_risk_val = self.sess.run(
+                    self.emp_risk,
+                    feed_dict=leave_one_feed_dict)
+            else:
+                # refit with some more iterations
+                emp_risk_val = self.refit_with_feed_dict(
+                    leave_one_feed_dict, n_iter,
+                    verbose=(verbose >= 1), force_restart=force_restart)
 
             losses_val = self.sess.run(
                 self.losses, feed_dict=self.get_new_feed_dict(
                     {'X': X_valid, 'y': y_valid}))
 
-            losses_loo[train_idx:train_idx+1, :] = (
-                losses_full - losses_val).T
+            losses_loo[counter:counter+1, :] = (
+                losses_val - losses_full).T
 
             dur_time = time.time() - start_time
             if 0 < verbose < 1:
-                if counter % int(self.n*verbose) == 0:
+                if counter % int(len(leave_indices) * verbose) == 0:
                     print('LOO Fold %d: loss = %.8f (%.3f sec)' % (
                         counter, emp_risk_val, dur_time))
+
+            # restore checkpoint
+            if not sklearn_refit:
+                self.load(iter_to_load=iter_to_load)
         return losses_loo
 
     @staticmethod
