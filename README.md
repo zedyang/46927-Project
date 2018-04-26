@@ -19,13 +19,16 @@
 
 ## TODO
 
+- More experiments; Images; Interpretations
+- Implement 2-Layers Perceptron
+- Implement (maybe) a simple CNN
+- LiSSA approximation [(2)][2]
+- Fancy Plots
 - Logistic Regression influence terms illustration **(Done)**
 - Implement Binary Logistic Regression **(Done)**
 - Implement Smoothed SVC **(Done)**
 - Implement Regularized Regression **(Done)**
-- Implement 2-Layers Perceptron
 - Conjugate Gradient approximation **(Done)**
-- LiSSA approximation [(2)][2]
 - Improve Optimization Routine **(Done)**
 
 ## Introduction
