@@ -153,14 +153,19 @@ class SmoothedSupportVector(EmpiricalRiskOptimizer):
         :param t:
         :return:
         """
-        exponents = (1-x)/t
-        exponents_truncate = tf.maximum(
-            exponents, tf.zeros_like(exponents))
-        return tf.multiply(t, exponents_truncate + tf.log(
-            tf.exp(exponents-exponents_truncate) +
-            tf.exp(tf.zeros_like(exponents)-exponents_truncate)
-        ), name='smooth_hinge_loss')
 
+        if t != 0:
+            exponents = (1-x)/t
+            exponents_truncate = tf.maximum(
+                exponents, tf.zeros_like(exponents))
+            return tf.multiply(t, exponents_truncate + tf.log(
+                tf.exp(exponents-exponents_truncate) +
+                tf.exp(tf.zeros_like(exponents)-exponents_truncate)
+            ), name='smooth_hinge_loss')
+        else:
+
+            return tf.maximum(tf.constant(0, dtype=tf.float32), 1-x, name='smooth_hinge_loss')
+        
     def get_all_params(self):
         # number of parameters.
         self.n_params = self.n_features

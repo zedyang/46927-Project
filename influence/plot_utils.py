@@ -14,14 +14,12 @@ import tensorflow as tf
 
 # TODO: 那个"左右连线"的图，换model看influence怎么变
 #
-
 def compare_with_loo(influences, loo_diff, n_samples,
                      method_names=('brute-force', 'cg')):
     n_methods = len(influences)
     fig, axes = plt.subplots(2, n_methods, figsize=(n_methods*5, 10))
     leave_tr, n_te = influences[0].shape
     # frame_trunc = np.percentile(loo_diff, trunc)
-
     for m in range(n_methods):
         for j in range(n_te):
             axes[0, m].plot(
@@ -44,6 +42,35 @@ def compare_with_loo(influences, loo_diff, n_samples,
             'yticks': []})
     return fig, axes
 
+def param_cross_comparison(influences, loo_diff,
+                           n_samples, param):
+    n_methods = len(influences)
+    assert n_methods == len(loo_diff) == len(param) and n_methods > 1
+
+    fig, axes = plt.subplots(2, n_methods, figsize=(n_methods * 5, 10))
+    leave_tr, n_te = influences[0].shape
+    # frame_trunc = np.percentile(loo_diff, trunc)
+    for m in range(n_methods):
+        for j in range(n_te):
+            axes[0, m].plot(
+                influences[m][:, j] / n_samples,
+                loo_diff[m][:, j], 'o', color='black')
+            axes[1, m].plot(
+                influences[m][:, j] / n_samples,
+                loo_diff[m][:, j] + j, 'o')
+
+        axes[0, m].update({
+            'title': 'Influence with param={} V.S. Numerical LOO'.format(param[m]),
+            'xlabel': 'Influence I_loss/-n',
+            'ylabel': 'Numerical LOO'
+            # 'xlim': (-frame_trunc, frame_trunc),
+            # 'ylim': (-frame_trunc, frame_trunc)
+        })
+
+        axes[1, m].update({
+            'title': 'Colored & Translated by different Validation Points',
+            'yticks': []})
+    return fig, axes
 
 def strip_consts(graph_def, max_const_size=32):
     """
