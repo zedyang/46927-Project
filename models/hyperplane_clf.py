@@ -7,9 +7,122 @@ import tensorflow as tf
 from influence.emp_risk_optimizer import EmpiricalRiskOptimizer
 
 
+class MulticlassLogisticRegression(EmpiricalRiskOptimizer):
+    """
+    Multiclass Logistic Regression
+    """
+    def __init__(self, **kwargs):
+        super(MulticlassLogisticRegression, self).__init__(**kwargs)
+        self.C = kwargs.pop('C')
+        self.hyperparams += ['C']
+        self.y_prob = None
+
+    def get_all_params(self):
+        """
+        :return:
+        """
+        # number of parameters: Weights W is (p * g) matrix
+        self.n_params = self.n_features*self.n_classes
+
+        # build the flat params container
+        all_params = tf.get_variable(
+            name='flat_params',
+            shape=(self.n_params, 1),
+            initializer=tf.random_normal_initializer)
+
+        # build the params dict
+        self.all_params_dict['W'] = tf.reshape(
+            all_params, [self.n_features, self.n_classes])
+
+        return all_params
+
+    def get_emp_risk(self):
+        W = self.all_params_dict['W']
+
+        # logits
+        logits = tf.matmul(self.X_input, W)
+        self.y_prob = tf.nn.softmax(logits)
+
+        # L2 regularization
+        l2_penalty = self.C * tf.reduce_sum(
+            W ** 2 / self.n_samples, name='l2_penalty')
+
+        # losses
+        losses = tf.add(
+            tf.nn.softmax_cross_entropy_with_logits_v2(
+                labels=self.y_input, logits=logits,
+                name='cross_entropy_loss'),
+            l2_penalty)
+        emp_risk = tf.reduce_mean(losses, name='emp_risk')
+        return losses, emp_risk
+
+    def fit_with_sklearn(self, feed_dict=None, **kwargs):
+        # fit with sklearn model
+        if feed_dict is None:
+            feed_dict = {'X': self.data['X'], 'y': self.data['y']}
+
+        if not self.trained:
+            self.fit(
+                feed_dict['X'], feed_dict['y'],
+                n_iter=None, lazy_fit=True)
+
+        self.sklearn_clf = LogisticRegression(
+            C=1/self.C,
+            fit_intercept=False,
+            tol=1e-8,
+            solver='lbfgs',
+            warm_start=True,
+            max_iter=1000
+        )
+        self.sklearn_clf.fit(
+            feed_dict['X'],
+            # feed_dict['y'] is one-hot encoded
+            np.argmax(feed_dict['y'], axis=1),
+            **kwargs)
+
+        # update params
+        W = self.sklearn_clf.coef_.T
+        self.sess.run(
+            self.all_params_assign,
+            feed_dict={self.all_params_input: W.reshape(
+                (self.n_params, 1))}
+        )
+        self.trained = True
+        self.show_eval()
+        return self
+
+    def refit_with_sklearn(self, feed_dict, **kwargs):
+        assert self.sklearn_clf is not None
+        n, _ = feed_dict[self.X_input].shape
+        self.sklearn_clf.fit(
+            feed_dict[self.X_input],
+            # feed_dict['y'] is one-hot encoded
+            np.argmax(feed_dict[self.y_input], axis=1),
+            **kwargs)
+
+        # update params
+        # sklearn_clf.coef_ returns (n_feature * n_classes)
+        W = self.sklearn_clf.coef_.T
+        self.sess.run(
+            self.all_params_assign,
+            feed_dict={self.all_params_input: W.reshape(
+                (self.n_params, 1))}
+        )
+        self.trained = True
+        # self.show_eval()
+
+    def predict(self, X_test):
+        y_prob_val = self.sess.run(
+            self.y_prob,
+            feed_dict={self.X_input: X_test}
+        )
+        y_pred_cls = np.argmax(y_prob_val, axis=1)
+        return y_pred_cls
+
+
 class BinaryLogisticRegression(EmpiricalRiskOptimizer):
     """
-    BinaryLogisticRegression
+    Binary Logistic Regression
     """
 
     def __init__(self, **kwargs):
@@ -85,7 +198,7 @@ class BinaryLogisticRegression(EmpiricalRiskOptimizer):
         if not self.trained:
             self.fit(
                 feed_dict['X'], feed_dict['y'],
-                n_iter=None, lazy=True)
+                n_iter=None, lazy_fit=True)
 
         self.sklearn_clf = LogisticRegression(
             C=1/self.C,
@@ -163,8 +276,8 @@ class SmoothedSupportVector(EmpiricalRiskOptimizer):
                 tf.exp(tf.zeros_like(exponents)-exponents_truncate)
             ), name='smooth_hinge_loss')
         else:
-
-            return tf.maximum(tf.constant(0, dtype=tf.float32), 1-x, name='smooth_hinge_loss')
+            return tf.maximum(tf.constant(
+                0, dtype=tf.float32), 1-x, name='smooth_hinge_loss')
         
     def get_all_params(self):
         # number of parameters.

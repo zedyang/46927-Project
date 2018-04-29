@@ -88,6 +88,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         # Variables and Inputs
         self.data = None
         self._data_batch = None
+        self.n_classes = None
         self._idx_in_epoch = 0
         self.global_step = None
         self.adaptive_eta = None
@@ -208,7 +209,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             iter_to_switch_off_minibatch=20000,
             iter_to_switch_to_sgd=40000,
             verbose=True, show_eval=True,
-            lazy=False, **kwargs):
+            lazy_fit=False, **kwargs):
         """
         Fit the model by run tensorflow session, evaluating the optimization
         operation. All tensorflow objects are initialized here.
@@ -222,7 +223,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         :param iter_to_switch_to_sgd: int
         :param verbose: bool, whether to print the process.
         :param show_eval: bool, whether to show evaluation upon completion.
-        :param lazy: bool, whether to fit now or just initialize containers.
+        :param lazy_fit: bool, whether to fit now or just initialize containers.
         :param kwargs:
         :return: self, the fitted model.
         """
@@ -234,12 +235,14 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
 
             # data and minibatch utils
             self.n_samples, self.n_features = X.shape
+            _, g = y.shape
             self.data = {'X': X, 'y': y}
             self._data_batch = {'X': np.copy(X), 'y': np.copy(y)}
+            self.n_classes = g if g > 1 else 2
             self.X_input = tf.placeholder(
                 tf.float32, (None, self.n_features), name='X_input')
             self.y_input = tf.placeholder(
-                tf.float32, (None, 1), name='y_input')
+                tf.float32, (None, g), name='y_input')
             self.global_step = tf.Variable(
                 0, name='batch_counter', trainable=False)
 
@@ -280,7 +283,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         self.sess.run(init)
 
         # evaluation
-        if not lazy:
+        if not lazy_fit:
             for i in range(n_iter):
                 start_time = time.time()
                 _, epoch = self.update_eta(current_iter=i)

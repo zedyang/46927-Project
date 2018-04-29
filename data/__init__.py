@@ -24,7 +24,8 @@ class Datafile(Enum):
 
     # (Classification) Predict digit labels (1, 4)
     # http://yann.lecun.com/exdb/mnist/
-    BinaryMNIST17 = 'MNIST.csv'
+    BinaryMNIST17 = 'MNIST_17.csv'
+    FullMNIST = 'MNIST.csv'
 
 
 def load_data(data_file, test_config=(0,), random_state=42):
@@ -36,6 +37,8 @@ def load_data(data_file, test_config=(0,), random_state=42):
         X, y = load_marketing()
     elif data_file is Datafile.BinaryMNIST17:
         X, y = load_mnist_17()
+    elif data_file is Datafile.FullMNIST:
+        X, y = load_full_mnist()
     else:
         raise ValueError("Data set does not exist.")
     if type(test_config) in [int, float]:
@@ -52,6 +55,10 @@ def load_data(data_file, test_config=(0,), random_state=42):
     else:
         raise TypeError("Type {} not allowed for test_config.".format(
             str(type(test_config))))
+    print("X_train shape:", X_train.shape)
+    print("y_train shape:", y_train.shape)
+    print("X_test shape:", X_test.shape)
+    print("y_test shape:", y_test.shape)
     return X_train, X_test, y_train, y_test, test_config
 
 
@@ -91,15 +98,24 @@ def load_marketing():
     return X, y
 
 
-def load_mnist_17(labeling='0-1'):
+def load_mnist_17():
     df = pd.read_csv("data/{}".format(
         Datafile.BinaryMNIST17.value))
     df_1 = df[df['label'] == 1]
     df_7 = df[df['label'] == 7]
-    df_17 = pd.concat((df_1, df_7))
+    df_17 = pd.DataFrame(pd.concat((df_1, df_7)))
     n = len(df_17)
     df_17 = df_17.sample(frac=1).reset_index(drop=True)
     X = df_17.iloc[:, 1:].values
     y = df_17.iloc[:, 0].values.reshape(n, 1)
     y[y == 7] = 0
+    return X, y
+
+
+def load_full_mnist():
+    df = pd.read_csv("data/{}".format(
+        Datafile.FullMNIST.value))
+    n = len(df)
+    X = df.iloc[:, 1:].values
+    y = df.iloc[:, 0].values.reshape(n, 1)
     return X, y
