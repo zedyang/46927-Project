@@ -2,7 +2,6 @@ import os
 import time
 import json
 from collections import OrderedDict
-from lazy import lazy
 
 import numpy as np
 from scipy.optimize import fmin_ncg
@@ -703,61 +702,75 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
 
         return grads_per_elem
 
-    def get_eval(self, all_eval=True, **kwargs):
+    def get_eval(self, items):
         """
         Evaluate and return quantities on requests.
-        :param all_eval: bool, if True, evaluate all items.
-        :param kwargs:
-            - items: list of strings, if specified, only
+        :param items: list of strings, if specified, only
               return these items.
         :return:
         """
         assert self.trained is True
         feed_dict = self.get_new_feed_dict(self.data)
-        all_params_blocks = self.sess.run(
-            list(self.all_params_dict.values()),
-            feed_dict=feed_dict
-        )
-        losses_val, emp_risk_val = self.sess.run(
-            [self.losses, self.emp_risk],
-            feed_dict=feed_dict
-        )
-        grad_loss_val, hessian_loss_val = self.sess.run(
-            [self.grad_emp_risk, self.hessian_emp_risk],
-            feed_dict=feed_dict
-        )
-        params = {key: val for key, val in zip(
-            self.all_params_dict.keys(), all_params_blocks)}
-        params_flat = np.concatenate(tuple(params.values()), 0)
-        grads_stacked = np.vstack(grad_loss_val)
-        hessian = np.vstack(hessian_loss_val).reshape(
-            self.n_params, self.n_params)
+        eval_dict = dict()
+        if 'params' in items:
+            all_params_blocks = self.sess.run(
+                list(self.all_params_dict.values()),
+                feed_dict=feed_dict
+            )
+            params = {key: val for key, val in zip(
+                self.all_params_dict.keys(), all_params_blocks)}
+            eval_dict['params'] = params
 
-        eval_dict = {
-            'params': params,
-            'params_flat': params_flat,
-            'losses': losses_val,
-            'emp_risk': emp_risk_val,
-            'grads_stacked': grads_stacked,
-            'hessian': hessian
-        }
+        if 'params_flat' in items:
+            all_params_flat_val = self.sess.run(
+                self.all_params,
+                feed_dict=feed_dict
+            )
+            eval_dict['params_flat'] = all_params_flat_val
 
-        if all_eval is True and 'items' not in kwargs:
-            return eval_dict
+        if 'emp_risk' in items:
+            emp_risk_val = self.sess.run(
+                self.emp_risk,
+                feed_dict=feed_dict
+            )
+            eval_dict['emp_risk'] = emp_risk_val
+
+        if 'losses' in items:
+            losses_val = self.sess.run(
+                self.losses,
+                feed_dict=feed_dict
+            )
+            eval_dict['losses'] = losses_val
+
+        if 'grads' in items:
+            grad_loss_val = self.sess.run(
+                self.grad_emp_risk,
+                feed_dict=feed_dict
+            )
+            grads_stacked = np.vstack(grad_loss_val)
+            eval_dict['grads'] = grads_stacked
+
+        if 'hessian' in items:
+            hessian_loss_val = self.sess.run(
+                self.hessian_emp_risk,
+                feed_dict=feed_dict
+            )
+            hessian = np.vstack(hessian_loss_val).reshape(
+                self.n_params, self.n_params)
+            eval_dict['hessian'] = hessian
+
+        if len(items) == 1:
+            return eval_dict[items[0]]
         else:
-            # only retrieve selected items
-            items = kwargs.pop('items')
-            if len(items) == 1:
-                return eval_dict[items[0]]
-            return {key: eval_dict[key] for key in items}
+            return eval_dict
 
     def show_eval(self):
         assert self.trained is True
         evals = self.get_eval(
-            items=['params_flat', 'emp_risk', 'grads_stacked'])
+            items=['params_flat', 'emp_risk', 'grads'])
         params_ = evals['params_flat']
         emp_risk_ = evals['emp_risk']
-        grads_ = evals['grads_stacked']
+        grads_ = evals['grads']
         print("\nModel Evaluations:")
         print("------------------------------------------")
         print("Empirical Risk: %.6f" % emp_risk_)

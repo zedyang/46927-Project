@@ -62,7 +62,7 @@ class ConvNet(EmpiricalRiskOptimizer):
         all_params = tf.get_variable(
             name='flat_params',
             shape=(self.n_params, 1),
-            initializer=tf.zeros_initializer)
+            initializer=tf.truncated_normal_initializer)
 
         # make parameter blocks
         W_conv1 = tf.reshape(
