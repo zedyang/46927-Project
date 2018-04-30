@@ -1,19 +1,18 @@
 import os
 from functools import partial
 from io import BytesIO
+from IPython.display import clear_output, Image, display, HTML
 import numpy as np
-
+import tensorflow as tf
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 import seaborn as sns
 import PIL.Image
-from IPython.display import clear_output, Image, display, HTML
-
-import tensorflow as tf
-
 
 # TODO: 那个"左右连线"的图，换model看influence怎么变
 #
+
+
 def compare_with_loo(influences, loo_diff, n_samples,
                      method_names=('brute-force', 'cg')):
     n_methods = len(influences)
@@ -41,6 +40,7 @@ def compare_with_loo(influences, loo_diff, n_samples,
             'title': 'Colored & Translated by different Validation Points',
             'yticks': []})
     return fig, axes
+
 
 def param_cross_comparison(influences, loo_diff,
                            n_samples, param):
@@ -71,6 +71,7 @@ def param_cross_comparison(influences, loo_diff,
             'title': 'Colored & Translated by different Validation Points',
             'yticks': []})
     return fig, axes
+
 
 def strip_consts(graph_def, max_const_size=32):
     """

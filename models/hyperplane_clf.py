@@ -1,6 +1,4 @@
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.exceptions import NotFittedError
 import tensorflow as tf
@@ -28,7 +26,7 @@ class MulticlassLogisticRegression(EmpiricalRiskOptimizer):
         all_params = tf.get_variable(
             name='flat_params',
             shape=(self.n_params, 1),
-            initializer=tf.random_normal_initializer)
+            initializer=tf.zeros_initializer)
 
         # build the params dict
         self.all_params_dict['W'] = tf.reshape(

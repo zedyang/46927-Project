@@ -5,10 +5,8 @@ from collections import OrderedDict
 from lazy import lazy
 
 import numpy as np
-import pandas as pd
 from scipy.optimize import fmin_ncg
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
 from tensorflow.python.ops import array_ops, math_ops
@@ -192,7 +190,6 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         assert self.n_samples % self.batch_size
         n_iters_in_epoch = self.n_samples / self.batch_size
         current_epoch = current_iter // n_iters_in_epoch
-        decay = 1
         if current_epoch < self.decay_epochs[0]:
             decay = 1
         elif current_epoch < self.decay_epochs[1]:
@@ -521,27 +518,25 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             else 'hessian_vector_product'
         return tf.gradients(grads_v_products, xs, name=name)
 
-    @lazy
-    def inv_hessian(self):
+    def inv_hessian(self, damping=0.0):
         """
-        Evaluate the hessian inverse.
-        Note: Only evaluate once, should create an another object
-              for re-evaluation.
+        :param damping: float, l2 regularization added to hessian.
         :return: 2-dim np.ndarray, the inverse of
                  the hessian of empirical risk wrt all params.
         """
         try:
             H = self.get_eval(items=['hessian'])
+            H += damping*np.eye(H.shape[0])
             H_inv = np.linalg.inv(H)
             return H_inv
         except np.linalg.LinAlgError as e:
             print(str(e))
 
-    def eval_hvp(self, v, concat=True):
+    def eval_hvp(self, v, damping=0.0):
         """
 
         :param v:
-        :param concat:
+        :param damping:
         :return:
         """
         if v.ndim == 1:
@@ -549,28 +544,30 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         feed_dict = self.get_new_feed_dict({'v': v})
         hessian_vector_product_val = self.sess.run(
             self.hessian_vector_product, feed_dict=feed_dict)
-        if concat:
-            hessian_vector_product_val = np.concatenate(
-                hessian_vector_product_val, axis=0)
+        hessian_vector_product_val = np.concatenate(
+            hessian_vector_product_val, axis=0)
+        hessian_vector_product_val += damping*v
         return hessian_vector_product_val
 
-    def influence_params(self, method):
+    def influence_params(self, method, damping=0.0):
         """
         Compute every training points' influence to parameters.
         :param method: string, the method to be adopted.
             - 'brute-force': Explicitly calculate H^-1 grad(L(z))
                for every training point z.
+        :param damping: float, l2 regularization added to hessian.
         :return: a list of n_samples 2-dim np.ndarray with shape
                  (self.n_params, 1). The i-th item is the i-th
                  training point's influence to all parameters.
         """
         assert self.trained is True
         if method == 'brute-force':
-            H_inv = self.inv_hessian
+            H_inv = self.inv_hessian(damping=damping)
             grads_train_elems = self.get_per_elem_gradients()
             return [H_inv.dot(v) for v in grads_train_elems]
 
-    def influence_loss(self, X_valid, y_valid, method, **kwargs):
+    def influence_loss(self, X_valid, y_valid, method,
+                       damping=0.0, leave_indices=None, **kwargs):
         """
         Compute every training points' influence to every validation points.
         :param X_valid: 2-dim np.ndarray, validation features.
@@ -579,32 +576,37 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             - 'brute-force': Explicitly calculate
                grad(L(z)) (H^-1) grad(L(z_test))
                for every training point z and every test point z_test.
+        :param damping: float, l2 regularization added to hessian.
+        :param leave_indices: list of ints
         :return: 2-dim np.ndarray of shape (n_train, n_test), [i,j]-th entry
                  is the i-th training point's influence
                  to the j-th validation point.
         """
         assert self.trained is True
-
-        grads_train_elems = self.get_per_elem_gradients()
+        grads_train_elems = self.get_per_elem_gradients(
+            train_idx=leave_indices)
         U = np.stack(grads_train_elems, axis=1)
         grads_valid_elems = self.get_per_elem_gradients(
             z_valid=(X_valid, y_valid))
-        influence_loss_val = np.zeros((self.n_samples, X_valid.shape[0]))
+
+        influence_loss_val = np.zeros(
+            (self.n_samples if leave_indices is None else len(leave_indices),
+             X_valid.shape[0]))
 
         for idx, v in enumerate(grads_valid_elems):
             if method == 'brute-force':
-                H_inv = self.inv_hessian
-                # this is a dim-2 (n_features*1) np.ndarray
+                H_inv = self.inv_hessian(damping=damping)
+                # this is a dim-2 (n_params*1) np.ndarray
                 inverse_hvp = H_inv.dot(v)
             elif method == 'cg':
-                # this is a dim-1 (n_features,) np.array
+                # this is a dim-1 (n_params,) np.array
                 tol, max_iter = 1e-5, 1000
                 if 'tol' in kwargs:
                     tol = kwargs['tol']
                 if 'max_iter' in kwargs:
                     max_iter = kwargs['max_iter']
                 inverse_hvp = self.get_inverse_hvp_cg(
-                    v, tol=tol, max_iter=max_iter)
+                    v, damping=damping, tol=tol, max_iter=max_iter)
                 inverse_hvp = np.array(
                     inverse_hvp).reshape((self.n_params, 1))
             else:
@@ -613,10 +615,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             influence_loss_val[:, idx:idx + 1] = I_loss_z
         return influence_loss_val
 
-    def get_inverse_hvp_cg(self, v, tol=1e-5, max_iter=1000):
+    def get_inverse_hvp_cg(self, v, damping=0.0,
+                           tol=1e-5, max_iter=1000):
         """
 
         :param v:
+        :param damping:
         :param tol:
         :param max_iter:
         :return:
@@ -646,7 +650,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             x0=np.concatenate(v),
             fprime=__cg_grad,
             fhess_p=__cg_fHess_p,
-            # callback=__cg_callback,
+            callback=__cg_callback,
             avextol=tol,
             maxiter=max_iter)
         return cg_min_results
@@ -684,7 +688,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                     np.vstack(grad_emp_risk_val))
         else:
             # evaluate gradients for training points
-            if not train_idx:
+            if train_idx is None:
                 train_idx = range(self.n_samples)
             start_time = time.time()
             for counter, idx in enumerate(train_idx):
