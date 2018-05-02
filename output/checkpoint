@@ -1,3 +1,3 @@
-model_checkpoint_path: "SmoothHinge-Notebook-checkpoint-49999"
-all_model_checkpoint_paths: "SmoothHinge-Notebook-checkpoint-44999"
-all_model_checkpoint_paths: "SmoothHinge-Notebook-checkpoint-49999"
+model_checkpoint_path: "BinaryLogistic-Notebook-checkpoint-49999"
+all_model_checkpoint_paths: "BinaryLogistic-Notebook-checkpoint-44999"
+all_model_checkpoint_paths: "BinaryLogistic-Notebook-checkpoint-49999"
