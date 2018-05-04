@@ -105,7 +105,8 @@ def load_mnist_17():
     df_7 = df[df['label'] == 7]
     df_17 = pd.DataFrame(pd.concat((df_1, df_7)))
     n = len(df_17)
-    df_17 = df_17.sample(frac=1).reset_index(drop=True)
+    df_17 = df_17.sample(
+        frac=1, random_state=42).reset_index(drop=True)
     X = df_17.iloc[:, 1:].values
     y = df_17.iloc[:, 0].values.reshape(n, 1)
     y[y == 7] = 0

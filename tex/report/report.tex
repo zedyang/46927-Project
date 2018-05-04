@@ -1,0 +1,821 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% ICML 2017 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Use the following line _only_ if you're still using LaTeX 2.09.
+%\documentstyle[icml2017,epsf,natbib]{article}
+% If you rely on Latex2e packages, like most moden people use this:
+\documentclass{article}
+
+% use Times
+% \usepackage{times}
+% For figures
+\usepackage{graphicx} % more modern
+%\usepackage{epsfig} % less modern
+\usepackage{subfigure} 
+\usepackage{bbm, bm, amsmath, amssymb, amsthm, mathrsfs}
+\usepackage{booktabs, tikz, float}
+
+
+% accent helper function
+\usepackage{accents}
+\DeclareMathSymbol{\fixwidehatsym}{\mathord}{largesymbols}{"62}
+\newcommand\lowerwidehatsym{%
+  \text{\smash{\raisebox{-1.3ex}{%
+    $\fixwidehatsym$}}}}
+\newcommand\fixwidehat[1]{%
+  \mathchoice
+    {\accentset{\displaystyle\lowerwidehatsym}{#1}}
+    {\accentset{\textstyle\lowerwidehatsym}{#1}}
+    {\accentset{\scriptstyle\lowerwidehatsym}{#1}}
+    {\accentset{\scriptscriptstyle\lowerwidehatsym}{#1}}
+}
+
+% For citations
+\usepackage{natbib}
+
+% For algorithms
+\usepackage{algorithm}
+\usepackage{algorithmic}
+
+% As of 2011, we use the hyperref package to produce hyperlinks in the
+% resulting PDF.  If this breaks your system, please commend out the
+% following usepackage line and replace \usepackage{icml2017} with
+% \usepackage[nohyperref]{icml2017} above.
+\usepackage{hyperref}
+
+
+% Packages hyperref and algorithmic misbehave sometimes.  We can fix
+% this with the following command.
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Employ the following version of the ``usepackage'' statement for
+% submitting the draft version of the paper for review.  This will set
+% the note in the first column to ``Under review.  Do not distribute.''
+\usepackage[accepted]{icml2017} 
+
+% Employ this version of the ``usepackage'' statement after the paper has
+% been accepted, when creating the final version.  This will set the
+% note in the first column to ``Proceedings of the...''
+%\usepackage[accepted]{icml2017}
+
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Statistical Learning Final Project}
+
+\begin{document} 
+
+\twocolumn[
+\icmltitle{Title}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2017
+% package.
+
+% list of affiliations. the first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% you can specify symbols, otherwise they are numbered in order
+% ideally, you should not use this facility. affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Yundong Liu}{a,equal}
+\icmlauthor{Yuze Liu}{r,equal}
+\icmlauthor{Zhengyang Qi}{d,equal}
+\icmlauthor{Ze Yang}{x,equal}
+\end{icmlauthorlist}
+
+\icmlaffiliation{a}{[yundongl@andrew.cmu.edu]}
+\icmlaffiliation{r}{[yuzel@andrew.cmu.edu]}
+\icmlaffiliation{d}{[zhengyaq@andrew.cmu.edu]}
+\icmlaffiliation{x}{[zey@andrew.cmu.edu]}
+
+
+
+
+% You may provide any keywords that you 
+% find helpful for describing your paper; these are used to populate 
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{boring formatting information, machine learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+%\footnotetext{hi}
+
+\begin{abstract} 
+The purpose of this document is to provide both the basic paper template and
+submission guidelines. Abstracts should be a single paragraph, between 4--6 sentences long, ideally.  Gross violations will trigger corrections at the camera-ready phase.
+\end{abstract} 
+
+\section{Introduction}
+\label{intro}
+
+Consider a supervised learning problem with random input variable $Z=(X,Y)\in \mathcal{X}\times \mathcal{Y}$, following the joint cumulative distribution $F_{X,Y}$. $\{\bm{z}_i\}_{i=1}^n = \{(\bm{x}_i, y_i)\}_{i=1}^n$ are the realizations of the input variables, i.e. the training points. Assume we are estimating a hypothesis parametrized by $\bm{\theta} \in \Theta$. Let $\mathcal{L}(\bm{z}, \bm{\theta})$\footnote{We fold in any regularization terms in to $\mathcal{L}$.} be the loss for a point $z$. The desired parameter $\bm{\theta}(F_Z)=\mathrm{argmin}_{\bm{\theta} \in \Theta}\mathbb{E}\left[\mathcal{L}(\bm{z},\bm{\theta})\right]$ minimizes the expected prediction error. 
+
+$\bm{\theta}$, as well as many other $\mathcal{M}$-estimators, falls in to a broader concept of \textit{statistical functional} \cite{nonp}, which is a mapping from the space of population cumulative distribution to some field. Given the training set, the empirical cumulative distribution $\fixwidehat{F}_Z$ is usually our best estimate to the true underlying population distribution. $\fixwidehat{\bm{\theta}} = \bm{\theta}(\fixwidehat{F}_Z)$, the plug-in estimator of the statistical functional, is obtained by solving empirical risk minimization problem.
+\begin{align}\label{emprisk}
+	\bm{\theta}(\fixwidehat{F}_Z)&=\underset{\bm{\theta} \in \Theta}{\mathrm{argmin}}\int\mathcal{L}(\bm{z},\bm{\theta})d\fixwidehat{F}_Z \notag\\[-5pt]
+	&=\underset{\bm{\theta} \in \Theta}{\mathrm{argmin}}\int\mathcal{L}(\bm{z},	\bm{\theta})\frac{\partial}{\partial \bm{z}}\left(\frac{1}{n}\sum_{i=1}^n H(\bm{z}-\bm{z}_i)\right) d \bm{z}\notag\\[-5pt]
+	&=\underset{\bm{\theta} \in \Theta}{\mathrm{argmin}}~\frac{1}{n}\sum_{i=1}^n\mathcal{L}(\bm{z}_i,\bm{\theta})
+\end{align}
+Where $H(\bm{z}-\bm{z}_i)$ is the Heaviside step function centered at the $i^{th}$ observation $\bm{z}_i$, and it's distribution derivative is the Dirac delta function centered at $\bm{z}_i$. 
+
+Solving the empirical risk optimization problem is the first phase of supervised learning. The second phase is usually assess quality of the fitted model's prediction power on a validation set. The validation loss on a test point $\bm{z}_{te}$ (with true label $\bm{y}_{te}$ and predicted label $f(\bm{x}_{te}, \bm{\theta})$) is $\mathcal{L}(\bm{z}_{te}, \bm{\theta}(F_Z))$, also a statistical functional.
+
+Our goal is to understand the effect of the training points on a model’s fitted parameters and its predictions. Now that we have established the concept of empirical risk minimizer and validation loss as plug-in estimators of the statistical functionals $\bm{\theta}(F_Z)$ and $\mathcal{L}(\bm{z}_{te}, \bm{\theta}(F_Z))$, respectively; it is natural to ask: How to measure the ``sensitivity'' of the plug-in estimators with respect to the empirical distribution? In the language of machine learning, we are asking how much would the fitted parameters and the validation losses change, if we perturb the training data by a little bit. This idea can be mathematically formalized by the \emph{influence function}.
+
+
+
+\subsection{Measuring the Influence to Parameters}
+The G\^ateaux Derivative generalizes the idea of directional derivative to functions between locally convex topological vector spaces such as Banach spaces. The G\^ateaux derivative of a statistical functional $\bm{\theta}(F_Z)$ at $F^*_Z$ in the direction $G$ is defined as:
+\begin{align}\label{gateaux}
+	\mathcal{I}_{\bm{\theta}}(G) &:= \nabla_{G} \bm{\theta}(F_Z)\biggr\rvert_{F_Z=F^*_Z} \notag\\
+	&= \underset{h \to 0}{\lim}\frac{\bm{\theta}((1-h)F^*_Z + hG) - \bm{\theta}(F^*_Z)}{h}
+\end{align}
+In particular, if $F^*_Z$ is the true population distribution, and the direction $G$ is the Heaviside step function $H(\bm{z}-\bm{z}^*)$ centered at $\bm{z}^*$, the G\^ateaux derivative is called the \emph{Influence Function}. It is essentially the sensitivity of the statistical functional $\bm{\theta}(F_Z)$ with respect to adding a little probability mass at $\bm{z}=\bm{z}^*$. By convention, the Heaviside function in this context is usually denoted as $\delta_{\bm{z}^*}$, which should not be confused with the Dirac delta function. By this definition, we can write down the G\^ateaux derivative of the empirical risk minimizer with respect to upweighting a training point $\bm{z}_{tr}$: 
+\vspace{-6pt}\begin{align}\label{empinfluence}
+	\mathcal{I}_{\fixwidehat{\bm{\theta}}}(\bm{z}_{tr}) = \underset{h \to 0}{\lim}\frac{\bm{\theta}((1-h)\fixwidehat{F}_Z+ h\delta_{\bm{z}_{tr}}) - \bm{\theta}(\fixwidehat{F}_Z)}{h}
+\end{align}
+which is usually called the empirical influence function. It is worth mentioning that if we take $h=-\frac{1}{n}$, then the contaminated distribution in the numerator, $(1+\frac{1}{n})\fixwidehat{F}_Z - \frac{1}{n}H(\bm{z}-\bm{z}_{tr})$ is actually the empirical distribution after \emph{removing} $\bm{z}_{tr}$ from the training set\footnote{It evaluates to $(1+\frac{1}{n})\fixwidehat{F}_{-i} + o(\frac{1}{n})$, we can drop the higher order term.}.
+
+
+
+\subsection{Measuring the Influence to Testing Loss}
+The fitted model parameters is a bridge that connects the training points and the prediction on unseen testing points. Ultimately we care about the training points' effect on the prediction. For this purpose we introduce one more influence function to measure the sensitivity of the loss of a given \emph{validation point} $\bm{z}_{te}$ with respect to adding a little probability mass at a particular training point $\bm{z}_{tr}$.
+\vspace{-4pt}\begin{align}\label{lossinfluence}
+	\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te}) &= \underset{h \to 0}{\lim}\frac{\mathcal{L}(\bm{z}_{te}, \bm{\theta}(\fixwidehat{F}_{-\bm{z}_{tr}})) - \mathcal{L}(\bm{z}_{te}, \bm{\theta}(\fixwidehat{F}_Z))}{h}\notag\\[-3pt]
+	F_{-\bm{z}_{tr}}&= (1-h)\fixwidehat{F}_Z + h\delta_{\bm{z}_{tr}}
+\end{align}
+
+
+
+
+\section{Approach}
+The naive approach to compute $\mathcal{I}_{\hat{\theta}}$ and $\mathcal{I}_{\mathcal{L}}$ is very straightforward. Recall that $\fixwidehat{\bm{\theta}}_{-i}:=\bm{\theta}((1+\frac{1}{n})\fixwidehat{F}_Z- \frac{1}{n}\delta_{\bm{z}_i})$ is the model parameter estimated from the leave-one-out training set; (\ref{empinfluence}) can be reformulated as
+$\mathcal{I}_{\fixwidehat{\bm{\theta}}}(\bm{z}_{i}) = \lim_{n \to \infty}n(\fixwidehat{\bm{\theta}}_{-i} - \fixwidehat{\bm{\theta}})$. This approach, however, requires $n$-runs of leave-one-out retraing if we want to evaluate the influence for all training points, which is prohibitively slow in most cases. Fortunately, under certain assumptions we can approximate $\fixwidehat{\bm{\theta}}_{-i} - \fixwidehat{\bm{\theta}}$ very well without explicitly solving another empirical risk optimization problem for $\fixwidehat{\bm{\theta}}_{-i}$.
+
+To make that possible we assume for now that the empirical risk is twice differentiable, and strictly convex in $\bm{\theta}$. That implies the hessian of the empirical risk is positive definite. We will relax these assumptions in subsequent sections.
+
+Consider the empirical risk optimization problem for the contaminated distribution which \emph{downweights} the training point $\bm{z}_{i}$:
+\vspace{-2pt}\begin{align}\label{lootheta}
+	\fixwidehat{\bm{\theta}}_{-h, \bm{z}_{i}} &= \bm{\theta}((1+h)\fixwidehat{F}_Z- h\delta_{\bm{z}_{i}})\\[-4pt]
+	&=\underset{\theta\in \Theta}{\mathrm{argmin}}~\frac{1+h}{n}\sum_{j=1}^n\mathcal{L}(\bm{z}_j,\bm{\theta}) - h\mathcal{L}(\bm{z}_i, \theta)\notag
+\end{align}
+Since the empirical risk $R(\bm{\theta}):=\frac{1}{n}\sum_{j=1}^n\mathcal{L}(\bm{z}_j,\bm{\theta})$ is strictly convex, the optimality condition is:
+\begin{equation}\label{optcond}
+	(1+h)\nabla_{\bm{\theta}}R(\fixwidehat{\bm{\theta}}_{-h, \bm{z}_{i}}) - h \nabla_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}}_{-h, \bm{z}_{i}}) = 0
+\end{equation}
+We assume the perturbation is small in the sense that $h\to 0$, so the difference in parameter estimate is also small: $\fixwidehat{\bm{\theta}}_{-h, \bm{z}_{i}} - \fixwidehat{\bm{\theta}} = \bm{\Delta}_{\bm{\theta}} \to \bm{0}$. We perform a Taylor expansion of the left-hand side of (\ref{optcond}) at $\fixwidehat{\bm{\theta}}$:
+\vspace{-3pt}\begin{align}
+&(1+h)\nabla_{\bm{\theta}}R(\fixwidehat{\bm{\theta}}) - h \nabla_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}})~+ \\
+&\left[(1+h)\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}}) - h \nabla^2_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}}) \right]\bm{\Delta}_{\bm{\theta}}+o(\left\lVert \bm{\Delta}_{\bm{\theta}} \right\rVert) = 0\notag
+\end{align}
+Drop the $o(\left\lVert \bm{\Delta}_{\bm{\theta}} \right\rVert)$ terms, and use the fact that $\nabla_{\bm{\theta}}R(\fixwidehat{\bm{\theta}})=\bm{0}$:
+\vspace{-3pt}\begin{align}
+\bm{\Delta}_{\bm{\theta}} &\approx -\left[(1+h)\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}}) - h \nabla^2_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}}) \right]^{-1}\nabla_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}})h \notag\\
+&\approx-\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}})^{-1} \nabla_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}})h
+\end{align}
+If $n$ is large enough, we take $h=-\frac{1}{n}\to0$, and thus 
+\vspace{-3pt}\begin{align}\label{I_theta}
+\mathcal{I}_{\fixwidehat{\bm{\theta}}}(\bm{z}_{i}) &= \underset{n \to \infty}{\lim}\frac{\bm{\theta}((1+1/n)\fixwidehat{F}_Z- \delta_{\bm{z}_{i}}/n) - \bm{\theta}(\fixwidehat{F}_Z)}{-1/n} \notag\\
+ &= \underset{n \to \infty}{\lim}-n(\fixwidehat{\bm{\theta}}_{-\frac{1}{n}, \bm{z}_i} - \fixwidehat{\bm{\theta}}) = \underset{n \to \infty}{\lim}-n \bm{\Delta}_{\bm{\theta}} \notag\\
+&\approx -\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}})^{-1} \nabla_{\bm{\theta}} \mathcal{L}(\bm{z}_i, \fixwidehat{\bm{\theta}})
+\end{align}
+A classic theory \cite{cook1982} shows that this approximation equals a single step of Newton's method using $\fixwidehat{\bm{\theta}}$ as the starting value to minimize the quadratic approximation to the leave-one-out empirical risk.
+
+Next, we can apply the chain rule to derive the closed-form expression of the influence of downweighting a training sample on a function of $\fixwidehat{\bm{\theta}}$. The function we care about is the validation loss $\mathcal{L}(\bm{z}_{te}, \bm{\theta}(\fixwidehat{F}_Z))$. We have:
+\vspace{-3pt}\begin{align}\label{I_loss}
+\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te}) &= \nabla_{\delta_{\bm{z}_{tr}}} \mathcal{L}(\bm{z}_{te}, \bm{\theta}(F_Z))\biggr\rvert_{F_Z=\fixwidehat{F}_Z} \\[-2pt]
+&= \nabla_{\bm{\theta}}\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})^{\top}\underset{h \to 0}{\lim}\frac{\bm{\theta}(\fixwidehat{F}_{-\bm{z}_{tr}}) - \bm{\theta}(\fixwidehat{F}_Z)}{h}\notag\\[0pt]
+&\approx-\nabla_{\bm{\theta}}\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})^{\top}\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}})^{-1} \nabla_{\bm{\theta}} \mathcal{L}(\bm{z}_{tr}, \fixwidehat{\bm{\theta}})\notag
+\end{align}
+
+
+\section{Implementations}
+For $n$ observations and $\bm{\theta}\in \mathbb{R}^p$, the exact calculation using (\ref{I_loss}) enables us to get the influence of all training points on validation loss without retraining the model. For a particular testing point $\bm{z}_{te}$, the quantity $\bm{p}_{te}=\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}})^{-1}\nabla_{\bm{\theta}}\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$ is the same for all training points, so it need to be evaluated only once. Then one can compuate the inner product $\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te}) = -\bm{p}_{te}^{\top} \nabla_{\bm{\theta}}\mathcal{L}(\bm{z}_{i}, \fixwidehat{\bm{\theta}})$ for all training points $\{\bm{z}_i\}_{i=1}^n$, which only costs $O(np)$.
+
+The real bottleneck of this exact method is computing $\bm{p}_{te}$. It involves forming the $p\times p$ Hessian matrix for each of the $n$ terms in the empirical risk, and inverting this matrix. This requires $O(np^2 + p^3)$ operations - very expensive for high-dimensional problems with a large number of parameters. 
+
+The idea to overcome this bottleneck is to avoid explicitly forming and inverting the hessian $\fixwidehat{\bm{H}}:=\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}})$. Fortunately, the only thing we really need is $\bm{p}_{te}$, which has the form of $\fixwidehat{\bm{H}} \bm{v}$ - the product of the $p\times p$ hessian and a $p\times1$ vector. \cite{hvp} showed that the Hessian-vector product (HVP) equals the directional derivative of the gradient in the direction of $\bm{v}$,
+\vspace{-7pt}\begin{align}\label{hvp}
+\fixwidehat{\bm{H}} \bm{v} = \lim\limits_{r\rightarrow0} \frac{\nabla_{\bm{\theta}} R(\fixwidehat{\bm{\theta}} + r \bm{v})-\nabla_{\bm{\theta}} R(\fixwidehat{\bm{\theta}})}{r}
+\end{align}
+This method can be implemented in auto-gradients systems, or using finite-difference approximation, such that computing $\fixwidehat{\bm{H}} \bm{v}$ takes $O(np)$ time for arbitrary $\bm{v}$. Two techniques are discussed in \cite{koh2017} to compute $\bm{p}_{te}$ by only evaluating HVPs, and we implemented both of them.
+
+\subsection{Conjugate Gradients}
+Under our assumptions, $\bm{p}_{te}$ is the solution to the positive-definite linear system $\nabla^2_{\bm{\theta}}R(\fixwidehat{\bm{\theta}}) \bm{p}_{te} = \nabla_{\bm{\theta}}\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$. There is a very effective iterative algorithm for solving such linear systems with a symmetric positive-definite matrix, and only requires the evaluation of matrix-vector products: the linear conjugate gradients method (CG). Its implementation details and empirical performance on large datasets are well-studied in \cite{martens10}.
+
+\subsection{Stochastic Taylor Approximation}
+If the Jordan normal form of $(\bm{I}-\fixwidehat{\bm{H}})$ is $\bm{J}$, there exists an invertible matrix $\bm{P}$ such that $(\bm{I}-\fixwidehat{\bm{H}}) = \bm{P}\bm{J}\bm{P}^{-1}$; this yields $(\bm{I}-\fixwidehat{\bm{H}})^m = \bm{P}\bm{J}^m\bm{P}^{-1} \to 0$ as $m\to \infty$ if and only if $|\lambda| < 1$ for all the eigenvalues of $(\bm{I}-\fixwidehat{\bm{H}})$. We assume this to be true, then power series approximation can be applied: $(\bm{I}-(\bm{I}-\fixwidehat{\bm{H}}))^{-1}=\fixwidehat{\bm{H}}^{-1} = \sum_{i=0}^{\infty} (\bm{I}-\fixwidehat{\bm{H}})^i$. Let the partial sum be $\fixwidehat{\bm{H}}^{-1}_j = \sum_{i=0}^{j} (\bm{I}-\fixwidehat{\bm{H}})^i$, we have the following recursive formula for the inverse hessian vector product $\bm{p}_m := \fixwidehat{\bm{H}}^{-1}_m \bm{v}$:
+\vspace{-2pt}\begin{align}\label{lissarule}
+\fixwidehat{\bm{H}}^{-1}_j \bm{v} &= \left[\bm{I} + (\bm{I} - \fixwidehat{\bm{H}})\fixwidehat{\bm{H}}^{-1}_{j-1}\right]\bm{v}\notag\\
+\bm{p}_j &= \bm{v} + \bm{p}_{j-1} - \fixwidehat{\bm{H}} \bm{p}_{j-1}
+\end{align}
+So that $\bm{p}_m=\fixwidehat{\bm{H}}^{-1}_m \bm{v} \to \fixwidehat{\bm{H}}^{-1} \bm{v}$. \cite{lissa} showed that one can replace the full hessian $\fixwidehat{\bm{H}}$ in (\ref{lissarule}) with the hessian of a single element of loss $\nabla_{\theta}^2 \mathcal{L}(\bm{z}_{j}, \fixwidehat{\bm{\theta}})$, and $\bm{z}_{j}$ uniformed random sampled from the whole training set for each iteration, and still retains a relatively high accuracy. By doing this, one only need to evaluate the HVP: $\nabla_{\theta}^2 \mathcal{L}(\bm{z}_{j}, \fixwidehat{\bm{\theta}}) \bm{p}_{j-1}$ for each iteration, which costs $O(p)$. The following pseudocode describes how to implement this procedure in a \texttt{Tensorflow}-like auto-gradients system.
+\vspace{-8pt}
+\begin{algorithm}[H]
+   \caption{\\ Linear time Stochastic $2^{nd}$ Order Algorithm (LiSSA)}
+   \label{alg:example}
+\begin{algorithmic}
+   \STATE {\bfseries Inputs:} (data $\{\bm{z}_i\}$, vector $\bm{v}$, integer $m$, 
+   \STATE \qquad function \texttt{hvp}($\bm{z}, \bm{v}$) to evaluate $\nabla_{\theta}^2 \mathcal{L}(\bm{z}, \fixwidehat{\bm{\theta}}) \bm{v}$)
+   \STATE Initialize $\texttt{curEstimate} \gets \bm{v}$
+   \FOR{$i=0$ {\bfseries to} $m$}
+   \STATE$\texttt{z}\gets$ Draw 1 point from $\{\bm{z}_i\}_{i=1}^n$
+   \STATE$\texttt{h} \gets \texttt{hvp}(\texttt{z}, \texttt{curEstimate})$
+   \STATE Scale $\texttt{h}$ such that the power series converges.
+   \STATE$\texttt{curEstimate} \gets \bm{v} + \texttt{curEstimate} + \texttt{h}$
+   \ENDFOR
+\end{algorithmic}
+\end{algorithm}
+\vspace{-16pt}
+The algorithm above takes $O(mp)$ time to run. We can repeat it for $s$ times and take the average to further reduce the variance - which takes $O(smp)$ in total. Therefore, evaluating $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ takes $O(np + smp)$ time. Our experiments in next section show empirically that on a large dataset, using $sm=O(n)$ gives good accuracy. 
+
+
+
+\section{Experiments and Extensions}
+Recall (\ref{I_theta}), $\mathcal{I}_{\fixwidehat{\bm{\theta}}}(\bm{z}_{i}) = {\lim}_{n \to \infty}-n(\fixwidehat{\bm{\theta}}_{-\frac{1}{n}, \bm{z}_i} - \fixwidehat{\bm{\theta}})$ implies that the influence function is an asymptotic approximation of the quantity $-n(\fixwidehat{\bm{\theta}}_{-\frac{1}{n}, \bm{z}_i} - \fixwidehat{\bm{\theta}})$, the difference between leave-one-out refitted parameter and the full empirical risk minimizer, scaled by the sample size. Same argument holds for $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$. In this section, we show with experiments and different models that the influence matches the LOO retraining difference under the assumptions that $R(\fixwidehat{\bm{\theta}})$ is strictly convex and twice differentiable. Moreover, they remain highly correlated even if the assumptions are violated.
+
+\subsection{Ridge Regression}
+We can derive a closed-form expression of $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ for the ridge regression empirical risk:
+\begin{align}\label{ridge_R}
+\vspace{-0.15in}
+R_{\text{ridge}}(\fixwidehat{\bm{\theta}}) = \frac{1}{n}\sum_{i=1}^n \left( (y_i - \bm{x}_i^{\top} \fixwidehat{\bm{\theta}} )^2 + \frac{\lambda}{n} \left\lVert\fixwidehat{\bm{\theta}}  \right\rVert_2^2\right)
+\vspace{-0.15in}
+\end{align}
+Note that we fold the regularization term within the loss function, and scale it with $n$ so that the regularization in total loss is $\lambda \left\lVert\fixwidehat{\bm{\theta}}  \right\rVert_2^2$. For a certain validation point $\bm{z}_{te}$, the loss is $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}) = (y_{te} - \bm{x}_{te}^{\top} \fixwidehat{\bm{\theta}} )^2 + \frac{\lambda}{n} \left\lVert\fixwidehat{\bm{\theta}}  \right\rVert_2^2$. Therefore, the influence of a training point $\bm{z}_{tr}$ on that validation loss is:
+\begin{align}\label{ridge_I_loss}
+\vspace{-0.15in}
+\mathcal{I}_{\mathcal{L}_{\text{ridge}}}(\bm{z}_{tr}, \bm{z}_{te}) &= \frac{n}{2}\nabla^{\top}_{\bm{\theta}}\mathcal{L}(\bm{z}_{tr}, \fixwidehat{\bm{\theta}})\left(\bm{X}^{\top} \bm{X} + \lambda \bm{I}_p\right)^{-1}\cdot\notag\\
+&\qquad\nabla_{\bm{\theta}}\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}) \notag\\[-4pt]
+\nabla_{\bm{\theta}}\mathcal{L}(\bm{z}, \fixwidehat{\bm{\theta}}) &= -2\bm{x}^{\top}(y-\bm{x}^{\top}\fixwidehat{\bm{\theta}}) + \frac{2 \lambda}{n} \fixwidehat{\bm{\theta}}
+\vspace{-0.15in}
+\end{align}
+
+
+\begin{figure*}[ht]
+\vskip 0.0in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth*2]{fig-ridge}}
+\vskip -0.1in
+\caption{\textbf{Influence function} $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ \textbf{matches leave-one-out difference.} We randomly picked a validation point $\bm{z}_{te}$ and calculated the influence on validation loss for all training points $\bm{z}_i$. In this illustration $\bm{z}_{te}$ is the $42^{\text{rd}}$ instance in the dataset, and $\mathcal{I}_{\mathcal{L}}$ was evaluated for the rest 516 points. \textbf{(Panel-1):} We plotted the LOO difference $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}_{-\frac{1}{n},\bm{z}_i})$ $- \mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$ against $-\frac{1}{n}\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})$ for each $\bm{z}_i$. The influence is calucated by explicitly forming and inverting hessian matrix $\nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})$. \textbf{(Panel-2):} The influence is evaluated by solving the linear system with conjugate gradients, only hessian-vector products were evaluated. \textbf{(Panel-3):} The influence was evaluated with the original Taylor approximation. The recursion step is \emph{exactly} the same as (\ref{lissarule}), i.e. the HVPs were evaluated with the \emph{full} empirical risk $R(\fixwidehat{\bm{\theta}})$. We set the recursion depth to be $m=2000$, and we divided the HVPs by a scaling constant $C=400$ to ensure the convergence of the power series. \textbf{(Panel-4):} The influence was evaluated with the LiSSA algorithm: for each recursion step, the algorithm only look at one training point $\bm{z}_j$, and the HVP was evaluated with that \emph{single} element of loss $\mathcal{L}(\bm{z}_j, \fixwidehat{\bm{\theta}})$. We used the same recursion depth and scaling constant.} 
+\label{ridge_examples}
+\end{center}
+\vskip -0.25in
+\end{figure*} 
+We fit a ridge regression with $\lambda = 1.0$ on the \href{https://archive.ics.uci.edu/ml/datasets/forest+fires}{\texttt{ForestFires}} dataset, a regression task with 517 instances and 13 features. The aim is to predict the burned area of forest fires. We randomly draw a validation point and use the rest instances to fit the model. 
+
+After training the model, we computed $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}_{-\frac{1}{n},\bm{z}_i})$ $- \mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$, the difference between the validation loss after doing actural LOO retaining and the original loss with $\fixwidehat{\bm{\theta}}$, for all training points. Then, we plot the actual LOO difference against its asymptotic approximation, $-\frac{1}{n}\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$, to assess the accuracy of our influence functions with all three methods that we discussed: explicit hessian inverse, conjugate gradients, and stochastic Taylor approximation (LiSSA). The results are presented in Figure \ref{ridge_examples}. 
+
+The influence and the leave-one-out difference matches chosely. For explicit hessian inverse and CG, there was an almost exact match. For Taylor approximation methods, there was a little variance; furthermore, we didn't lose much accuracy when switching from full HVP to LiSSA algorithm, but increased the speed by $n$ times.
+
+\subsection{Logistic Regression}
+Next we switch to classification tasks. A closed-form expression of $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ is also easy to derive for the logistic regression empirical risk. Let $\sigma(t)=1/(1+e^{-t})$, label $y\in \{0,1\}$, we have
+\begin{align}\label{logit_R}
+\vspace{-0.2in}
+R_{\text{logit}}(\fixwidehat{\bm{\theta}}) = \frac{1}{n}\sum_{i=1}^n \left(-y_i\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i + \log(1+e^{\fixwidehat{\bm{\theta}}^{\top} \bm{x}_i})\right)
+\vspace{-0.2in}
+\end{align}
+For a certain validation point, the loss is $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}) = -y\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te} + \log(1+e^{\fixwidehat{\bm{\theta}}^{\top} \bm{x}_{te}})$. Hence the influence of a training point $\bm{z}_{tr}$ on that validation loss is:
+\begin{align}\label{logit_I_loss}
+\vspace{-0.15in}
+\mathcal{I}_{\mathcal{L}_{logit}}(\bm{z}_{tr}, \bm{z}_{te}) &= -\bm{x}_{tr}^{\top}\nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})^{-1} \bm{x}_{te}\cdot\\
+&(\sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})-y_{tr})(\sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})-y_{te})\notag\\[-3pt]
+\nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})&=\frac{1}{n}\sum_{i=1}^n \sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i)\sigma(-\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i)\bm{x}_i\bm{x}_i^{\top}\notag
+\vspace{-0.15in}
+\end{align}
+If there is an $L_2$-regularization, we just need to fold the $\frac{\lambda}{n} \left\lVert \fixwidehat{\bm{\theta}}\right\rVert_2^2$ into the loss function like we did for the Ridge regression. 
+
+\cite{koh2017} discussed an alternative formulation of logistic loss. Instead of using 0-1 labels, consider $y \in \{1,-1\}$. The loss function under this $\pm 1$ formulation is the loss is $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}) = \log(1+e^{-y_{te}\fixwidehat{\bm{\theta}}^{\top} \bm{x}_{te}})$. The influence of a training point on that $\pm1$ validation loss is:
+\begin{align}\label{logit_I_loss2}
+\vspace{-0.15in}
+\mathcal{I}'_{\mathcal{L}_{logit}}(\bm{z}_{tr}, \bm{z}_{te}) &= -\bm{x}_{tr}^{\top}\nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})^{-1} \bm{x}_{te}\cdot\\
+&y_{tr}\sigma(-y_{tr}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})\cdot y_{te}\sigma(-y_{te}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})\notag
+\vspace{-0.15in}
+\end{align}
+One can examine that (\ref{logit_I_loss}) and (\ref{logit_I_loss2}) are equivalent. 
+
+
+\begin{figure*}[ht]
+\vskip 0.0in
+\begin{center}
+\centerline{\includegraphics[width=1.4\columnwidth]{fig-logit}
+\includegraphics[width=0.487\columnwidth]{fig-logit-img}}
+\vskip -0.1in
+\caption{\textbf{Influence for handwritten digits classification.} In this illustration $\bm{z}_{te}$ is the $7^{\text{th}}$ instance in the dataset. The red dots stand for positive points, blue for negative points. \textbf{(Left):} We plotted the LOO difference $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}_{-\frac{1}{n},\bm{z}_i})$ $- \mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$ against $-\frac{1}{n}\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})$ for all the three methods. The explicit hessian inverse and the CG method are the same as we used in the Ridge experiment. For the LiSSA method we sampled 1 training point in each recursion step, and we set the recursion depth as $m=10000$; we divided the HVPs by a scaling constant $C=10^3$. An outlier can be observed in the Southwest panel where we ran the LiSSA algorithm only once. In the Southeast panel, we ran the algorithm 10 times, and took average to obtain the final estimate. The variance is reduced and the outlier has gone. \textbf{(Right):} The upper panel shows the validation point. The middle panel is the training point with the smallest influence, i.e. the smallest $| \mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te}) |$. It looks like an ``easy'' positive point. The bottom panel is the training point with the largest negative influence, which looks like a ``hard'' positive point. It can be thought as the most harmful to predicting $\bm{z}_{te}$ in the sense that removing this point will cause reduce the prediction loss.} 
+\label{logit_examples}
+\end{center}
+\vskip -0.25in
+\end{figure*} 
+
+We fit an $L_2$-regularized logistic regression model with $\lambda = 1000$ on the \href{http://yann.lecun.com/exdb/mnist/}{\texttt{MNIST}} dataset. For simplicity we only include digits 1 and 7, and we let the label $y=1$ stand for digit 1 and $y=0$ for digit 7. The resulting binary MNIST dataset has 9084 instances; each instance is a $28\times 28$ image, represented by grayscale matrix. We first standardize the data before training the model, it turns out that standardizing helps control the numerical scale of losses, and stabilizes the influence calculation. Then, we randomly choose a testing point and calculate the influence of the rest training points; we also compute the actual LOO difference using \texttt{sklean}'s LBFGS solver. The results are presented in Figure \ref{logit_examples}. Note that there are points from both classes that have positive or negaive influences, indicating that $\text{sgn}(\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te}))$ is \emph{not} determined by whether $y_{te}=y_{tr}$ or not.
+
+On \href{http://yann.lecun.com/exdb/mnist/}{\texttt{MNIST}} dataset, we performed another analysis on the closed-form expression (\ref{logit_I_loss2}): we examined the effect of the $\sigma(-y_{tr}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})$ factor and the hessian matrix on the influence. The analysis is shown in Figure \ref{logit_components}. In particular, we replicated the approach in the original paper by plotting $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ calculated by (\ref{logit_I_loss2}) against its variants that misses certain factor(s). 
+
+\begin{figure}[ht]
+\vskip 0.0in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{fig-components}}
+\vskip -0.1in
+\caption{\textbf{Components of influence.} The correct influence is plotted on y-axis, while its variants that misses certain factor(s) are plotted on x-axis. Blue dots are the training points with \emph{same label} as $\bm{z}_{te}$; red dots are the opposites. \textbf{(Left):} The black-dashed line has slope = 1; one can observe that many points lie to the right of the $45^{\circ}$ line in the first quadrant, which implies that overestimate the influence of these training points if the factor $\sigma(-y_{tr}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})$ was excluded. \textbf{(Mid):} Without the hessian inverse, $\text{sgn}(\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})) = \bm{1} (y_{te}=y_{tr})$. This is due to the fact that we used the unscaled data, where all features are positive grayscales. Clearly, this is incorrect since we have illustrated in Fugure \ref{logit_examples} that points from both classes can be helpful or harmful. \textbf{(Right):} Without both factors, the influence degenerates into $\bm{x}_{tr}^{\top} \bm{x}_{te}\cdot [y_{tr}y_{te}\sigma(-y_{te}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})] = \bm{x}_{tr}^{\top} \bm{x}_{te}c$, which is just the inner product scaled by a constant. } 
+\label{logit_components}
+\end{center}
+\vskip -0.25in
+\end{figure}
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Support Vector Machine}
+
+\section{Applications}
+\subsection{Understanding Model Behavior}
+\section{Discussion}
+
+
+~\newpage 
+\ifx
+The guidelines below will be enforced for initial submissions and
+camera-ready copies.  Here is a brief summary:
+\begin{itemize}
+\item Submissions must be in PDF.
+\item The maximum paper length is \textbf{8 pages excluding references and acknowledgements, and 10 pages
+  including references and acknowledgements} (pages 9 and 10 must contain only references and acknowledgements).
+\item Do \textbf{not include author information or acknowledgements} in your initial
+submission. 
+\item Your paper should be in \textbf{10 point Times font}.
+\item Make sure your PDF file only uses Type-1 fonts.
+\item Place figure captions {\em under} the figure (and omit titles from inside
+the graphic file itself).  Place table captions {\em over} the table.
+\item References must include page numbers whenever possible and be as complete
+as possible.  Place multiple citations in chronological order.  
+\item Do not alter the style template; in particular, do not compress the paper
+format by reducing the vertical spaces.
+\item Keep your abstract brief and self-contained, one
+   paragraph and roughly 4--6 sentences.  Gross violations will require correction at the camera-ready phase.
+  Title should have content words capitalized.
+  
+
+\end{itemize}
+
+\subsection{Submitting Papers}
+
+{\bf Paper Deadline:} The deadline for paper submission to ICML 2017
+is at \textbf{23:59 Universal Time (3:59 p.m.\ Pacific Standard Time) on February 24, 2017}.
+If your full submission does not reach us by this time, it will 
+not be considered for publication. There is no separate abstract submission.
+
+{\bf Anonymous Submission:} To facilitate blind review, no identifying
+author information should appear on the title page or in the paper
+itself.  Section~\ref{author info} will explain the details of how to
+format this.
+
+{\bf Simultaneous Submission:} ICML will not accept any paper which,
+at the time of submission, is under review for another conference or
+has already been published. This policy also applies to papers that
+overlap substantially in technical content with conference papers
+under review or previously published. ICML submissions must not be
+submitted to other conferences during ICML's review period. Authors
+may submit to ICML substantially different versions of journal papers
+that are currently under review by the journal, but not yet accepted
+at the time of submission. Informal publications, such as technical
+reports or papers in workshop proceedings which do not appear in
+print, do not fall under these restrictions.
+
+\medskip
+
+To ensure our ability to print submissions, authors must provide their
+manuscripts in \textbf{PDF} format.  Furthermore, please make sure
+that files contain only Type-1 fonts (e.g.,~using the program {\tt
+  pdffonts} in linux or using File/DocumentProperties/Fonts in
+Acrobat).  Other fonts (like Type-3) might come from graphics files
+imported into the document.
+
+Authors using \textbf{Word} must convert their document to PDF.  Most
+of the latest versions of Word have the facility to do this
+automatically.  Submissions will not be accepted in Word format or any
+format other than PDF. Really. We're not joking. Don't send Word.
+
+Those who use \textbf{\LaTeX} to format their accepted papers need to pay close
+attention to the typefaces used.  Specifically, when producing the PDF by first
+converting the dvi output of \LaTeX\ to Postscript the default behavior is to
+use non-scalable Type-3 PostScript bitmap fonts to represent the standard
+\LaTeX\ fonts. The resulting document is difficult to read in electronic form;
+the type appears fuzzy. To avoid this problem, dvips must be instructed to use
+an alternative font map.  This can be achieved with the following two commands:
+
+{\footnotesize
+\begin{verbatim}
+dvips -Ppdf -tletter -G0 -o paper.ps paper.dvi
+ps2pdf paper.ps
+\end{verbatim}}
+Note that it is a zero following the ``-G''.  This tells dvips to use
+the config.pdf file (and this file refers to a better font mapping).
+
+A better alternative is to use the \textbf{pdflatex} program instead of
+straight \LaTeX. This program avoids the Type-3 font problem, however you must
+ensure that all of the fonts are embedded (use {\tt pdffonts}). If they are
+not, you need to configure pdflatex to use a font map file that specifies that
+the fonts be embedded. Also you should ensure that images are not downsampled
+or otherwise compressed in a lossy way.
+
+Note that the 2017 style files use the {\tt hyperref} package to
+make clickable links in documents.  If this causes problems for you,
+add {\tt nohyperref} as one of the options to the {\tt icml2017}
+usepackage statement.
+
+\subsection{Reacting to Reviews}
+
+We will continue the ICML tradition in which the authors are given the
+option of providing a short reaction to the initial reviews. These
+reactions will be taken into account in the discussion among the
+reviewers and area chairs.
+
+\subsection{Submitting Final Camera-Ready Copy}
+
+The final versions of papers accepted for publication should follow the
+same format and naming convention as initial submissions, except of
+course that the normal author information (names and affiliations)
+should be given.  See Section~\ref{final author} for details of how to
+format this.
+
+The footnote, ``Preliminary work.  Under review by the International
+Conference on Machine Learning (ICML).  Do not distribute.'' must be
+modified to \textit{Proceedings of the
+$\mathit{34}^{th}$ International Conference on Machine Learning},
+Sydney, Australia, 2017.  JMLR: W\&CP. 
+Copyright 2017 by the author(s).
+
+For those using the \textbf{\LaTeX} style file, simply change
+$\mathtt{\backslash usepackage\{icml2017\}}$ to 
+
+$$\mathtt{\backslash usepackage[accepted]\{icml2017\}}$$
+
+\noindent
+Authors using \textbf{Word} must edit the
+footnote on the first page of the document themselves.
+
+Camera-ready copies should have the title of the paper as running head
+on each page except the first one.  The running title consists of a
+single line centered above a horizontal rule which is $1$ point thick.
+The running head should be centered, bold and in $9$ point type.  The
+rule should be $10$ points above the main text.  For those using the
+\textbf{\LaTeX} style file, the original title is automatically set as running
+head using the {\tt fancyhdr} package which is included in the ICML
+2017 style file package.  In case that the original title exceeds the
+size restrictions, a shorter form can be supplied by using
+
+\verb|\icmltitlerunning{...}|
+
+just before $\mathtt{\backslash begin\{document\}}$.
+Authors using \textbf{Word} must edit the header of the document themselves.
+
+\section{Format of the Paper} 
+ 
+All submissions must follow the same format to ensure the printer can
+reproduce them without problems and to let readers more easily find
+the information that they desire.
+
+\subsection{Length and Dimensions}
+
+Papers must not exceed eight (8) pages, including all figures, tables,
+and appendices, but excluding references and acknowledgements. When references and acknowledgements are included,
+the paper must not exceed ten (10) pages.
+Acknowledgements should be limited to grants and people who contributed to the paper.
+Any submission that exceeds 
+this page limit or that diverges significantly from the format specified 
+herein will be rejected without review.
+
+The text of the paper should be formatted in two columns, with an
+overall width of 6.75 inches, height of 9.0 inches, and 0.25 inches
+between the columns. The left margin should be 0.75 inches and the top
+margin 1.0 inch (2.54~cm). The right and bottom margins will depend on
+whether you print on US letter or A4 paper, but all final versions
+must be produced for US letter size.
+
+The paper body should be set in 10~point type with a vertical spacing
+of 11~points. Please use Times typeface throughout the text.
+
+\subsection{Title}
+
+The paper title should be set in 14~point bold type and centered
+between two horizontal rules that are 1~point thick, with 1.0~inch
+between the top rule and the top edge of the page. Capitalize the
+first letter of content words and put the rest of the title in lower
+case.
+
+\subsection{Author Information for Submission}
+\label{author info}
+
+To facilitate blind review, author information must not appear.  If
+you are using \LaTeX\/ and the \texttt{icml2017.sty} file, you may use
+\verb+\icmlauthor{...}+ to specify authors.  The author information
+will simply not be printed until {\tt accepted} is an argument to the
+style file. Submissions that include the author information will not
+be reviewed.
+
+\subsubsection{Self-Citations}
+
+If your are citing published papers for which you are an author, refer
+to yourself in the third person. In particular, do not use phrases
+that reveal your identity (e.g., ``in previous work \cite{langley00}, we 
+have shown \ldots'').
+
+Do not anonymize citations in the reference section by removing or
+blacking out author names. The only exception are manuscripts that are
+not yet published (e.g. under submission). If you choose to refer to
+such unpublished manuscripts \cite{anonymous}, anonymized copies have 
+to be submitted
+as Supplementary Material via CMT. However, keep in mind that an ICML
+paper should be self contained and should contain sufficient detail
+for the reviewers to evaluate the work. In particular, reviewers are
+not required to look a the Supplementary Material when writing their
+review.
+
+\subsubsection{Camera-Ready Author Information}
+\label{final author}
+
+If a paper is accepted, a final camera-ready copy must be prepared.
+%
+For camera-ready papers, author information should start 0.3~inches
+below the bottom rule surrounding the title. The authors' names should
+appear in 10~point bold type, electronic mail addresses in 10~point
+small capitals, and physical addresses in ordinary 10~point type.
+Each author's name should be flush left, whereas the email address
+should be flush right on the same line. The author's physical address
+should appear flush left on the ensuing line, on a single line if
+possible. If successive authors have the same affiliation, then give
+their physical address only once.
+
+A sample file (in PDF) with author names is included in the ICML2017 
+style file package.
+
+\subsection{Abstract}
+
+The paper abstract should begin in the left column, 0.4~inches below
+the final address. The heading `Abstract' should be centered, bold,
+and in 11~point type. The abstract body should use 10~point type, with
+a vertical spacing of 11~points, and should be indented 0.25~inches
+more than normal on left-hand and right-hand margins. Insert
+0.4~inches of blank space after the body. Keep your abstract brief and 
+self-contained,
+limiting it to one paragraph and roughly 4--6 sentences.  Gross violations will require correction at the camera-ready phase.
+
+\subsection{Partitioning the Text} 
+
+You should organize your paper into sections and paragraphs to help
+readers place a structure on the material and understand its
+contributions.
+
+\subsubsection{Sections and Subsections}
+
+Section headings should be numbered, flush left, and set in 11~pt bold
+type with the content words capitalized. Leave 0.25~inches of space
+before the heading and 0.15~inches after the heading.
+
+Similarly, subsection headings should be numbered, flush left, and set
+in 10~pt bold type with the content words capitalized. Leave
+0.2~inches of space before the heading and 0.13~inches afterward.
+
+Finally, subsubsection headings should be numbered, flush left, and
+set in 10~pt small caps with the content words capitalized. Leave
+0.18~inches of space before the heading and 0.1~inches after the
+heading. 
+
+Please use no more than three levels of headings.
+
+\subsubsection{Paragraphs and Footnotes}
+
+Within each section or subsection, you should further partition the
+paper into paragraphs. Do not indent the first line of a given
+paragraph, but insert a blank line between succeeding ones.
+ 
+You can use footnotes\footnote{For the sake of readability, footnotes
+should be complete sentences.} to provide readers with additional
+information about a topic without interrupting the flow of the paper. 
+Indicate footnotes with a number in the text where the point is most
+relevant. Place the footnote in 9~point type at the bottom of the
+column in which it appears. Precede the first footnote in a column
+with a horizontal rule of 0.8~inches.\footnote{Multiple footnotes can
+appear in each column, in the same order as they appear in the text,
+but spread them across columns and pages if possible.}
+
+\begin{figure}[ht]
+\vskip 0.2in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{icml_numpapers}}
+\caption{Historical locations and number of accepted papers for International
+  Machine Learning Conferences (ICML 1993 -- ICML 2008) and
+  International Workshops on Machine Learning (ML 1988 -- ML
+  1992). At the time this figure was produced, the number of
+  accepted papers for ICML 2008 was unknown and instead estimated.}
+\label{icml-historical}
+\end{center}
+\vskip -0.2in
+\end{figure} 
+
+\subsection{Figures}
+ 
+You may want to include figures in the paper to help readers visualize
+your approach and your results. Such artwork should be centered,
+legible, and separated from the text. Lines should be dark and at
+least 0.5~points thick for purposes of reproduction, and text should
+not appear on a gray background.
+
+Label all distinct components of each figure. If the figure takes the
+form of a graph, then give a name for each axis and include a legend
+that briefly describes each curve. Do not include a title inside the
+figure; instead, the caption should serve this function.
+
+Number figures sequentially, placing the figure number and caption
+{\it after\/} the graphics, with at least 0.1~inches of space before
+the caption and 0.1~inches after it, as in
+Figure~\ref{icml-historical}.  The figure caption should be set in
+9~point type and centered unless it runs two or more lines, in which
+case it should be flush left.  You may float figures to the top or
+bottom of a column, and you may set wide figures across both columns
+(use the environment {\tt figure*} in \LaTeX), but always place
+two-column figures at the top or bottom of the page.
+
+\subsection{Algorithms}
+
+If you are using \LaTeX, please use the ``algorithm'' and ``algorithmic'' 
+environments to format pseudocode. These require 
+the corresponding stylefiles, algorithm.sty and 
+algorithmic.sty, which are supplied with this package. 
+Algorithm~\ref{alg:example} shows an example. 
+
+\begin{algorithm}[tb]
+   \caption{Bubble Sort}
+   \label{alg:example}
+\begin{algorithmic}
+   \STATE {\bfseries Input:} data $x_i$, size $m$
+   \REPEAT
+   \STATE Initialize $noChange = true$.
+   \FOR{$i=1$ {\bfseries to} $m-1$}
+   \IF{$x_i > x_{i+1}$} 
+   \STATE Swap $x_i$ and $x_{i+1}$
+   \STATE $noChange = false$
+   \ENDIF
+   \ENDFOR
+   \UNTIL{$noChange$ is $true$}
+\end{algorithmic}
+\end{algorithm}
+ 
+\subsection{Tables} 
+ 
+You may also want to include tables that summarize material. Like 
+figures, these should be centered, legible, and numbered consecutively. 
+However, place the title {\it above\/} the table with at least 
+0.1~inches of space before the title and the same after it, as in 
+Table~\ref{sample-table}. The table title should be set in 9~point 
+type and centered unless it runs two or more lines, in which case it
+should be flush left.
+
+% Note use of \abovespace and \belowspace to get reasonable spacing 
+% above and below tabular lines. 
+
+\begin{table}[t]
+\caption{Classification accuracies for naive Bayes and flexible 
+Bayes on various data sets.}
+\label{sample-table}
+\vskip 0.15in
+\begin{center}
+\begin{small}
+\begin{sc}
+\begin{tabular}{lcccr}
+\hline
+\abovespace\belowspace
+Data set & Naive & Flexible & Better? \\
+\hline
+\abovespace
+Breast    & 95.9$\pm$ 0.2& 96.7$\pm$ 0.2& $\surd$ \\
+Cleveland & 83.3$\pm$ 0.6& 80.0$\pm$ 0.6& $\times$\\
+Glass2    & 61.9$\pm$ 1.4& 83.8$\pm$ 0.7& $\surd$ \\
+Credit    & 74.8$\pm$ 0.5& 78.3$\pm$ 0.6&         \\
+Horse     & 73.3$\pm$ 0.9& 69.7$\pm$ 1.0& $\times$\\
+Meta      & 67.1$\pm$ 0.6& 76.5$\pm$ 0.5& $\surd$ \\
+Pima      & 75.1$\pm$ 0.6& 73.9$\pm$ 0.5&         \\
+\belowspace
+Vehicle   & 44.9$\pm$ 0.6& 61.5$\pm$ 0.4& $\surd$ \\
+\hline
+\end{tabular}
+\end{sc}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+Tables contain textual material that can be typeset, as contrasted 
+with figures, which contain graphical material that must be drawn. 
+Specify the contents of each row and column in the table's topmost
+row. Again, you may float tables to a column's top or bottom, and set
+wide tables across both columns, but place two-column tables at the
+top or bottom of the page.
+ 
+\subsection{Citations and References} 
+
+Please use APA reference format regardless of your formatter
+or word processor. If you rely on the \LaTeX\/ bibliographic 
+facility, use {\tt natbib.sty} and {\tt icml2017.bst} 
+included in the style-file package to obtain this format.
+
+Citations within the text should include the authors' last names and
+year. If the authors' names are included in the sentence, place only
+the year in parentheses, for example when referencing Arthur Samuel's
+pioneering work \yrcite{Samuel59}. Otherwise place the entire
+reference in parentheses with the authors and year separated by a
+comma \cite{Samuel59}. List multiple references separated by
+semicolons \cite{kearns89,Samuel59,mitchell80}. Use the `et~al.'
+construct only for citations with three or more authors or after
+listing all authors to a publication in an earlier reference \cite{MachineLearningI}.
+
+Authors should cite their own work in the third person
+in the initial version of their paper submitted for blind review.
+Please refer to Section~\ref{author info} for detailed instructions on how to
+cite your own papers.
+
+Use an unnumbered first-level section heading for the references, and 
+use a hanging indent style, with the first line of the reference flush
+against the left margin and subsequent lines indented by 10 points. 
+The references at the end of this document give examples for journal
+articles \cite{Samuel59}, conference publications \cite{langley00}, book chapters \cite{Newell81}, books \cite{DudaHart2nd}, edited volumes \cite{MachineLearningI}, 
+technical reports \cite{mitchell80}, and dissertations \cite{kearns89}. 
+
+Alphabetize references by the surnames of the first authors, with
+single author entries preceding multiple author entries. Order
+references for the same authors by year of publication, with the
+earliest first. Make sure that each reference includes all relevant
+information (e.g., page numbers).
+
+\subsection{Software and Data}
+
+We strongly encourage the publication of software and data with the
+camera-ready version of the paper whenever appropriate.  This can be
+done by including a URL in the camera-ready copy.  However, do not
+include URLs that reveal your institution or identity in your
+submission for review.  Instead, provide an anonymous URL or upload
+the material as ``Supplementary Material'' into the CMT reviewing
+system.  Note that reviewers are not required to look a this material
+when writing their review.
+
+% Acknowledgements should only appear in the accepted version. 
+\section*{Acknowledgements} 
+ 
+\textbf{Do not} include acknowledgements in the initial version of
+the paper submitted for blind review.
+
+If a paper is accepted, the final camera-ready version can (and
+probably should) include acknowledgements. In this case, please
+place such acknowledgements in an unnumbered section at the
+end of the paper. Typically, this will include thanks to reviewers
+who gave useful comments, to colleagues who contributed to the ideas, 
+and to funding agencies and corporate sponsors that provided financial 
+support.  
+
+
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+\nocite{langley00}
+\fi
+
+\bibliography{example_paper}
+\bibliographystyle{icml2017}
+
+\end{document} 
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was
+% created by Lise Getoor and Tobias Scheffer, it was slightly modified  
+% from the 2010 version by Thorsten Joachims & Johannes Fuernkranz, 
+% slightly modified from the 2009 version by Kiri Wagstaff and 
+% Sam Roweis's 2008 version, which is slightly modified from 
+% Prasad Tadepalli's 2007 version which is a lightly 
+% changed version of the previous year's version by Andrew Moore, 
+% which was in turn edited from those of Kristian Kersting and 
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.  

@@ -19,11 +19,13 @@
 
 ## TODO
 
-- More experiments; Images; Interpretations
-- Implement 2-Layers Perceptron
+- Report
+- Beamer Slides
+- More experiments; Images; Interpretations **(Done)**
+- Implement 2-Layers Perceptron **(Done)**
 - Implement (maybe) a simple CNN
-- LiSSA approximation [(2)][2]
-- Fancy Plots
+- LiSSA approximation [(2)][2] **(Done)**
+- Fancy Plots **(Done)**
 - Logistic Regression influence terms illustration **(Done)**
 - Implement Binary Logistic Regression **(Done)**
 - Implement Smoothed SVC **(Done)**

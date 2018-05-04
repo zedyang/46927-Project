@@ -39,8 +39,6 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
     to retrieve useful intermediate quantities on demands.
     """
 
-    # TODO: A better optimization procedure, maybe mini-batch?
-    # TODO: Only work for (n_samples*1) labels, implement multi-classes case
     # TODO: Should separate predict and inference for classifications.
 
     def __init__(self, **kwargs):
@@ -72,7 +70,6 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
 
         # Config
         self.trained = False
-        self.eval_hessian = True
 
         # Hyperparams
         self.init_eta = kwargs.pop('init_eta')
@@ -104,12 +101,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         self.train_op_sgd = None
         self.grad_emp_risk = None
         self.grad_individual = None
-        if self.eval_hessian:
-            self.hessian_emp_risk = None
+        self.hessian_emp_risk = None
         # hessian vector prod = Hv, v_placeholder is the placeholder for v
         self.hessian_vector_product = None
         self.v_placeholder = None
         self.sklearn_clf = None
+        self.grads_v_products = None
 
     def __repr__(self):
         """
@@ -156,10 +153,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.y_input: y[idx:idx + 1, :]
         }
 
-    def get_batch_feed_dict(self):
-        assert self.batch_size <= self.n_samples
+    def get_batch_feed_dict(self, batch_size=None):
+        if batch_size is None:
+            batch_size = self.batch_size
+        assert batch_size <= self.n_samples
         start = self._idx_in_epoch
-        self._idx_in_epoch += self.batch_size
+        self._idx_in_epoch += batch_size
         # if used for one pass, re-shuffle the data
         if self._idx_in_epoch > self.n_samples:
             perm = np.arange(self.n_samples)
@@ -169,7 +168,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 'y': self._data_batch['y'][perm, :]
             }
             start = 0
-            self._idx_in_epoch = self.batch_size
+            self._idx_in_epoch = batch_size
         end = self._idx_in_epoch
         return {
             self.X_input: self._data_batch['X'][start:end],
@@ -374,7 +373,6 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         Can not execute if self.emp_risk has not been initialized.
         :return: optimization operation.
         """
-        # TODO: A better optimization procedure, with mini-batch, etc.
         assert self.emp_risk is not None
         adam_optimizer = tf.train.AdamOptimizer(
             learning_rate=self.adaptive_eta, name='Adam')
@@ -494,8 +492,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             self.fit(X, y, **fit_params)
             return self.predict(X)
 
-    @staticmethod
-    def get_hessian_vector_product(ys, xs, v, first_grads=None, **kwargs):
+    def get_hessian_vector_product(self, ys, xs, v, first_grads=None, **kwargs):
         """
 
         :param ys:
@@ -508,14 +505,20 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         assert len(xs) == len(v)
         if first_grads is None:
             first_grads = tf.gradients(ys, xs)
-        grads_v_products = [
+        """
+        self.grads_v_products = [
             math_ops.multiply(grad_elem, array_ops.stop_gradient(v_elem))
             for grad_elem, v_elem in zip(first_grads, v)
             if grad_elem is not None
         ]
+        """
+
+        self.grads_v_products = tf.reduce_sum(
+            first_grads*tf.stop_gradient(v), name='grads_dot_v')
+
         name = kwargs.pop('name') if 'name' in kwargs \
             else 'hessian_vector_product'
-        return tf.gradients(grads_v_products, xs, name=name)
+        return tf.gradients(self.grads_v_products, xs, name=name)
 
     def inv_hessian(self, damping=0.0):
         """
@@ -531,11 +534,12 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         except np.linalg.LinAlgError as e:
             print(str(e))
 
-    def eval_hvp(self, v, damping=0.0):
+    def eval_hvp(self, v, damping=0.0, verbose=False):
         """
 
         :param v:
         :param damping:
+        :param verbose:
         :return:
         """
         if v.ndim == 1:
@@ -546,6 +550,41 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
         hessian_vector_product_val = np.concatenate(
             hessian_vector_product_val, axis=0)
         hessian_vector_product_val += damping*v
+        if verbose:
+            print('Hvp norm:', np.linalg.norm(
+                hessian_vector_product_val))
+        return hessian_vector_product_val
+
+    def eval_hvp_minibatch(self, v, damping=0.0, verbose=False):
+        """
+
+        :param v:
+        :param damping:
+        :param verbose:
+        :return:
+        """
+        if v.ndim == 1:
+            v = v.reshape((v.shape[0], 1))
+        n_iters = int(self.n_samples/self.batch_size)
+        hessian_vector_product_val = np.array([])
+        if verbose:
+            print("Evaluating hvp.", end='')
+        for i in range(n_iters):
+            feed_dict = self.get_batch_feed_dict()
+            feed_dict[self.v_placeholder] = v
+            hvp_batch = self.sess.run(
+                self.hessian_vector_product,
+                feed_dict=feed_dict)
+            hvp_batch = np.concatenate(hvp_batch, axis=0)
+            if i == 0:
+                hessian_vector_product_val = hvp_batch / n_iters
+            else:
+                hessian_vector_product_val += hvp_batch / n_iters
+            print(".", end='')
+        hessian_vector_product_val += damping * v
+        if verbose:
+            print('Hvp norm:', np.linalg.norm(
+                hessian_vector_product_val))
         return hessian_vector_product_val
 
     def influence_params(self, method, damping=0.0):
@@ -566,7 +605,8 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             return [H_inv.dot(v) for v in grads_train_elems]
 
     def influence_loss(self, X_valid, y_valid, method,
-                       damping=0.0, leave_indices=None, **kwargs):
+                       damping=0.0, minibatch=False,
+                       leave_indices=None, **kwargs):
         """
         Compute every training points' influence to every validation points.
         :param X_valid: 2-dim np.ndarray, validation features.
@@ -576,6 +616,8 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                grad(L(z)) (H^-1) grad(L(z_test))
                for every training point z and every test point z_test.
         :param damping: float, l2 regularization added to hessian.
+        :param minibatch: bool, whether to use minibatch evaluation
+               for hessian vector product or not.
         :param leave_indices: list of ints
         :return: 2-dim np.ndarray of shape (n_train, n_test), [i,j]-th entry
                  is the i-th training point's influence
@@ -605,41 +647,132 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 if 'max_iter' in kwargs:
                     max_iter = kwargs['max_iter']
                 inverse_hvp = self.get_inverse_hvp_cg(
-                    v, damping=damping, tol=tol, max_iter=max_iter)
+                    v, damping=damping, minibatch=minibatch,
+                    tol=tol, max_iter=max_iter)
                 inverse_hvp = np.array(
                     inverse_hvp).reshape((self.n_params, 1))
+            elif method == 'lissa':
+                repeat, scale, depth = 1, 10, 1000
+                batch_size = self.batch_size
+                verbose = 10
+                if 'scale' in kwargs:
+                    scale = kwargs['scale']
+                if 'repeat' in kwargs:
+                    repeat = kwargs['repeat']
+                if 'depth' in kwargs:
+                    depth = kwargs['depth']
+                if 'batch_size' in kwargs:
+                    batch_size = kwargs['batch_size']
+                if 'verbose' in kwargs:
+                    verbose = kwargs['verbose']
+                inverse_hvp = self.get_inverse_hvp_lissa(
+                    v, damping=damping, repeat=repeat, scale=scale,
+                    recursion_depth=depth, batch_size=batch_size,
+                    verbose=verbose
+                )
             else:
                 raise ValueError
             I_loss_z = U.T.dot(inverse_hvp)
             influence_loss_val[:, idx:idx + 1] = I_loss_z
         return influence_loss_val
 
-    def get_inverse_hvp_cg(self, v, damping=0.0,
+    def get_inverse_hvp_lissa(self, v, damping=0.0, scale=10,
+                              batch_size=None, verbose=100,
+                              recursion_depth=1000, repeat=1):
+        """
+
+        :param v:
+        :param damping:
+        :param scale:
+        :param batch_size:
+        :param verbose:
+        :param recursion_depth:
+        :param repeat:
+        :return:
+        """
+        inverse_hvp = None
+        for i in range(repeat):
+            print(f'--- Lissa Sample {i} ---')
+            curr_estimate = v
+
+            # Taylor recursion
+            for j in range(recursion_depth):
+                feed_dict = self.get_batch_feed_dict(
+                    batch_size=batch_size)
+                feed_dict[self.v_placeholder] = curr_estimate
+                hessian_vector_val = self.sess.run(
+                    self.hessian_vector_product,
+                    feed_dict=feed_dict)
+
+                hessian_vector_val = np.concatenate(
+                    hessian_vector_val)
+                curr_estimate = v + (1-damping)*curr_estimate \
+                    - hessian_vector_val/scale
+                if j % verbose == 0:
+                    norm = np.linalg.norm(
+                        np.concatenate(curr_estimate))
+                    print(f"Recursion depth: {j}, hvp norm: {norm}")
+
+                    """
+                    grad_v_products_val = self.sess.run(
+                        self.grads_v_products,
+                        feed_dict=feed_dict)
+                    print(hessian_vector_val, '***')
+                    """
+
+            if inverse_hvp is None:
+                inverse_hvp = curr_estimate/scale
+            else:
+                inverse_hvp += curr_estimate/scale
+
+        # average over r estimates
+        inverse_hvp /= repeat
+        return inverse_hvp
+
+    def get_inverse_hvp_cg(self, v, damping=0.0, minibatch=False,
                            tol=1e-5, max_iter=1000):
         """
 
         :param v:
         :param damping:
+        :param minibatch:
         :param tol:
         :param max_iter:
         :return:
         """
+        assert damping >= 0
+        if not minibatch:
+            def __cg_objective(x):
+                Hx = self.eval_hvp(x)
+                obj = np.multiply(0.5, x.T.dot(Hx)) - v.T.dot(x)
+                # d0, = obj.shape
+                return obj
 
-        def __cg_objective(x):
-            Hx = self.eval_hvp(x)
-            obj = np.multiply(0.5, x.T.dot(Hx)) - v.T.dot(x)
-            # d0, = obj.shape
-            return obj
+            def __cg_grad(x):
+                Hx = self.eval_hvp(x)
+                d0, d1 = Hx.shape
+                return (Hx - v).reshape((d0 * d1,))
 
-        def __cg_grad(x):
-            Hx = self.eval_hvp(x)
-            d0, d1 = Hx.shape
-            return (Hx - v).reshape((d0 * d1,))
+            def __cg_fHess_p(x, p):
+                Hp = self.eval_hvp(p)
+                d0, d1 = Hp.shape
+                return Hp.reshape((d0 * d1,))
+        else:
+            def __cg_objective(x):
+                Hx = self.eval_hvp_minibatch(x)
+                obj = np.multiply(0.5, x.T.dot(Hx)) - v.T.dot(x)
+                # d0, = obj.shape
+                return obj
 
-        def __cg_fHess_p(x, p):
-            Hp = self.eval_hvp(p)
-            d0, d1 = Hp.shape
-            return Hp.reshape((d0 * d1,))
+            def __cg_grad(x):
+                Hx = self.eval_hvp_minibatch(x)
+                d0, d1 = Hx.shape
+                return (Hx - v).reshape((d0 * d1,))
+
+            def __cg_fHess_p(x, p):
+                Hp = self.eval_hvp_minibatch(p)
+                d0, d1 = Hp.shape
+                return Hp.reshape((d0 * d1,))
 
         def __cg_callback(x):
             print('CG Objective: %s' % __cg_objective(x)[0])

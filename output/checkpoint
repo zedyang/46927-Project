@@ -1,3 +1,2 @@
-model_checkpoint_path: "SmoothHinge-Notebook-checkpoint-49999"
-all_model_checkpoint_paths: "SmoothHinge-Notebook-checkpoint-44999"
-all_model_checkpoint_paths: "SmoothHinge-Notebook-checkpoint-49999"
+model_checkpoint_path: "CNN-MNIST-checkpoint-9"
+all_model_checkpoint_paths: "CNN-MNIST-checkpoint-9"

@@ -201,10 +201,10 @@ class BinaryLogisticRegression(EmpiricalRiskOptimizer):
         self.sklearn_clf = LogisticRegression(
             C=1/self.C,
             fit_intercept=False,
-            tol=1e-8,
+            tol=1e-10,
             solver='lbfgs',
             warm_start=True,
-            max_iter=1000
+            max_iter=2000
         )
         self.sklearn_clf.fit(
             feed_dict['X'],
