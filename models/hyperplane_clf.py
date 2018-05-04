@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.exceptions import NotFittedError
 import tensorflow as tf
 from influence.emp_risk_optimizer import EmpiricalRiskOptimizer
@@ -279,7 +280,8 @@ class SmoothedSupportVector(EmpiricalRiskOptimizer):
         
     def get_all_params(self):
         # number of parameters.
-        self.n_params = self.n_features
+        self.n_params = self.n_features + 1
+        # fit intercept to match sklearn.SVC
 
         # build the flat params container
         all_params = tf.get_variable(
@@ -287,20 +289,23 @@ class SmoothedSupportVector(EmpiricalRiskOptimizer):
             initializer=tf.zeros_initializer)
 
         # build the params dict
-        self.all_params_dict[
-            'beta'] = all_params[0:self.n_params, :]
+        self.all_params_dict['beta'] = \
+            all_params[0:self.n_features, :]
+        self.all_params_dict['intercept'] = \
+            all_params[self.n_features:self.n_params, :]
 
         return all_params
 
     def get_emp_risk(self):
         # params dict split the params into groups, for convenience
         beta = self.all_params_dict['beta']
+        beta_0 = self.all_params_dict['intercept']
 
         # unsigned inner product
         logits = tf.matmul(self.X_input, beta, name='logits')
         margin = tf.multiply(
             tf.cast(self.y_input, tf.float32),
-            logits, name='margin')
+            logits+beta_0, name='margin')
 
         # L2 regularization
         l2_penalty = self.C*tf.reduce_sum(
@@ -343,13 +348,63 @@ class SmoothedSupportVector(EmpiricalRiskOptimizer):
 
         return losses, emp_risk
 
-    def fit_with_sklearn(self, **kwargs):
-        raise NotFittedError
+    def fit_with_sklearn(self, feed_dict=None, **kwargs):
+        # fit with sklearn model
+        if feed_dict is None:
+            feed_dict = {'X': self.data['X'], 'y': self.data['y']}
+
+        if not self.trained:
+            self.fit(
+                feed_dict['X'], feed_dict['y'],
+                n_iter=None, lazy_fit=True)
+
+        self.sklearn_clf = SVC(
+            C=self.C,
+            kernel='linear',
+            tol=1e-8,
+            max_iter=-1
+        )
+        self.sklearn_clf.fit(
+            feed_dict['X'],
+            feed_dict['y'].astype('int').reshape(self.n_samples,),
+            **kwargs)
+
+        # update params
+        all_params = np.concatenate([
+            self.sklearn_clf.coef_.reshape(self.n_features,),
+            self.sklearn_clf.intercept_])
+        self.sess.run(
+            self.all_params_assign,
+            feed_dict={self.all_params_input: all_params.reshape(
+                (self.n_params, 1))}
+        )
+        self.trained = True
+        self.show_eval()
+        return self
 
     def refit_with_sklearn(self, feed_dict, **kwargs):
-        raise NotFittedError
+        assert self.sklearn_clf is not None
+        n, _ = feed_dict[self.X_input].shape
+        self.sklearn_clf.fit(
+            feed_dict[self.X_input],
+            feed_dict[self.y_input].astype(
+                'int').reshape(n,),
+            **kwargs)
+
+        # update params
+        all_params = np.concatenate([
+            self.sklearn_clf.coef_.reshape(self.n_features,),
+            self.sklearn_clf.intercept_])
+        self.sess.run(
+            self.all_params_assign,
+            feed_dict={self.all_params_input: all_params.reshape(
+                (self.n_params, 1))}
+        )
+        self.trained = True
+        # self.show_eval()
 
     def predict(self, X_test):
         params = self.get_eval(items=['params'])
         beta = params['beta']
-        return np.sign(X_test.dot(beta))
+        beta_0 = params['intercept']
+        return np.sign(X_test.dot(beta)+beta_0)
