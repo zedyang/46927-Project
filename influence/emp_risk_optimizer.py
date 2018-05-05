@@ -672,6 +672,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
                 )
             else:
                 raise ValueError
+            print(f'Influence evaluated for testing point {idx}.')
             I_loss_z = U.T.dot(inverse_hvp)
             influence_loss_val[:, idx:idx + 1] = I_loss_z
         return influence_loss_val
