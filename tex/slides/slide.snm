@@ -11,9 +11,10 @@
 \beamer@slide {ridge_examples}{25}
 \beamer@slide {logit_R}{27}
 \beamer@slide {logit_I_loss}{27}
-\beamer@slide {logit_examples}{28}
-\beamer@slide {fig_svm}{29}
-\beamer@slide {logit_I_loss2}{31}
-\beamer@slide {logit_I_loss2}{31}
-\beamer@slide {logit_components}{31}
-\beamer@slide {logit_components}{33}
+\beamer@slide {logit_examples}{29}
+\beamer@slide {svc_R}{30}
+\beamer@slide {fig_svm}{30}
+\beamer@slide {logit_I_loss2}{32}
+\beamer@slide {logit_I_loss2}{32}
+\beamer@slide {logit_components}{32}
+\beamer@slide {logit_components}{34}

@@ -2,21 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ad102f8a-00f4-4f41-a094-368b99c9f327" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/data/__init__.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/models/hyperplane_clf.py" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/tests.py" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/models/linear_regression.py" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/models/svm.py" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/sv.ipynb" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/dictionaries/zed.xml" afterPath="$PROJECT_DIR$/.idea/dictionaries/zed.xml" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-44999.data-00000-of-00001" afterPath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-44999.data-00000-of-00001" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-44999.index" afterPath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-44999.index" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-44999.meta" afterPath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-44999.meta" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-49999.data-00000-of-00001" afterPath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-49999.data-00000-of-00001" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-49999.index" afterPath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-49999.index" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-49999.meta" afterPath="$PROJECT_DIR$/output/SmoothHinge-Notebook-checkpoint-49999.meta" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tex/report/report.pdf" afterPath="$PROJECT_DIR$/tex/report/report.pdf" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/data/simulate_data.ipynb" afterPath="$PROJECT_DIR$/data/simulate_data.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/data/svm_10.csv" afterPath="$PROJECT_DIR$/data/svm_10.csv" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/influence/emp_risk_optimizer.py" afterPath="$PROJECT_DIR$/influence/emp_risk_optimizer.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/influence/plot_utils.py" afterPath="$PROJECT_DIR$/influence/plot_utils.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/linear_reg.ipynb" afterPath="$PROJECT_DIR$/linear_reg.ipynb" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/models/regularized_regression.py" afterPath="$PROJECT_DIR$/models/regularized_regression.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/ridge_lin_reg.ipynb" afterPath="$PROJECT_DIR$/ridge_lin_reg.ipynb" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/output/checkpoint" afterPath="$PROJECT_DIR$/output/checkpoint" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/tex/report/report.tex" afterPath="$PROJECT_DIR$/tex/report/report.tex" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -32,7 +27,7 @@
           <file leaf-file-name="plot_utils.py" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/influence/plot_utils.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="272">
+                <state relative-caret-position="220">
                   <caret line="17" column="24" lean-forward="false" selection-start-line="17" selection-start-column="24" selection-end-line="17" selection-end-column="24" />
                   <folding>
                     <element signature="e#0#9#0" expanded="true" />
@@ -56,23 +51,9 @@
           <file leaf-file-name="emp_risk_optimizer.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/influence/emp_risk_optimizer.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="170">
-                  <caret line="67" column="24" lean-forward="false" selection-start-line="67" selection-start-column="24" selection-end-line="67" selection-end-column="24" />
-                  <folding>
-                    <element signature="e#0#10#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="experiments.py" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/influence/experiments.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1664">
-                  <caret line="104" column="24" lean-forward="false" selection-start-line="104" selection-start-column="24" selection-end-line="104" selection-end-column="24" />
-                  <folding>
-                    <element signature="e#0#18#0" expanded="true" />
-                  </folding>
+                <state relative-caret-position="508">
+                  <caret line="960" column="59" lean-forward="false" selection-start-line="960" selection-start-column="59" selection-end-line="960" selection-end-column="59" />
+                  <folding />
                 </state>
               </provider>
             </entry>
@@ -84,8 +65,8 @@
           <file leaf-file-name="hyperplane_clf.py" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/models/hyperplane_clf.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1888">
-                  <caret line="118" column="22" lean-forward="false" selection-start-line="118" selection-start-column="22" selection-end-line="118" selection-end-column="22" />
+                <state relative-caret-position="811">
+                  <caret line="386" column="27" lean-forward="false" selection-start-line="386" selection-start-column="27" selection-end-line="386" selection-end-column="27" />
                   <folding>
                     <element signature="e#0#18#0" expanded="true" />
                   </folding>
@@ -93,54 +74,12 @@
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="hyperplane_classifiers.ipynb" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/hyperplane_classifiers.ipynb">
-              <provider selected="true" editor-type-id="ipnb-editor">
-                <state>
-                  <selected id="2" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="sv_digits.ipynb" pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/sv_digits.ipynb">
-              <provider selected="true" editor-type-id="ipnb-editor">
-                <state>
-                  <selected id="2" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="tests.py" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/tests.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="704">
-                  <caret line="44" column="18" lean-forward="false" selection-start-line="44" selection-start-column="18" selection-end-line="44" selection-end-column="18" />
-                  <folding>
-                    <element signature="e#0#18#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="__init__.py" pinned="false" current-in-tab="false">
+          <file leaf-file-name="__init__.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/data/__init__.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="0">
-                  <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="9" selection-end-column="0" />
+                <state relative-caret-position="407">
+                  <caret line="76" column="42" lean-forward="false" selection-start-line="76" selection-start-column="42" selection-end-line="76" selection-end-column="42" />
                   <folding />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file leaf-file-name="genericNeuralNet.py" pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/influence/genericNeuralNet.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="5184">
-                  <caret line="324" column="8" lean-forward="false" selection-start-line="324" selection-start-column="8" selection-end-line="324" selection-end-column="8" />
-                  <folding>
-                    <element signature="e#0#31#0" expanded="true" />
-                  </folding>
                 </state>
               </provider>
             </entry>
@@ -201,21 +140,21 @@
         <option value="$PROJECT_DIR$/models/smooth_sv.py" />
         <option value="$PROJECT_DIR$/models/linear_regression.py" />
         <option value="$PROJECT_DIR$/models/smooth_hinge.py" />
-        <option value="$PROJECT_DIR$/models/hyperplane_clf.py" />
-        <option value="$PROJECT_DIR$/influence/emp_risk_optimizer.py" />
         <option value="$PROJECT_DIR$/models/regularized_regression.py" />
         <option value="$PROJECT_DIR$/data/data_index.py" />
-        <option value="$PROJECT_DIR$/data/__init__.py" />
         <option value="$PROJECT_DIR$/influence/plot_utils.py" />
         <option value="$PROJECT_DIR$/tests.py" />
         <option value="$PROJECT_DIR$/hyperplane_classifiers.ipynb" />
+        <option value="$PROJECT_DIR$/models/hyperplane_clf.py" />
+        <option value="$PROJECT_DIR$/influence/emp_risk_optimizer.py" />
+        <option value="$PROJECT_DIR$/data/__init__.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="1280" />
-    <option name="y" value="23" />
-    <option name="width" value="1920" />
+    <option name="x" value="1978" />
+    <option name="y" value="452" />
+    <option name="width" value="1237" />
     <option name="height" value="1053" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
@@ -252,6 +191,8 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scratches" />
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -278,8 +219,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scratches" />
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -422,15 +361,15 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1280" y="23" width="1920" height="1053" extended-state="6" />
+    <frame x="1978" y="452" width="1237" height="1053" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.104898825" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.1665272" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
-      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.124068156" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
+      <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.12384937" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32897604" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
@@ -469,19 +408,11 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="224">
           <caret line="14" column="0" lean-forward="false" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="23" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$PROJECT_DIR$/influence/closed_forms.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="560">
@@ -504,19 +435,11 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="224">
           <caret line="14" column="0" lean-forward="false" selection-start-line="14" selection-start-column="0" selection-end-line="14" selection-end-column="23" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$PROJECT_DIR$/influence/closed_forms.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="560">
@@ -538,19 +461,11 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1808">
           <caret line="113" column="8" lean-forward="false" selection-start-line="113" selection-start-column="8" selection-end-line="113" selection-end-column="8" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$PROJECT_DIR$/leverage.ipynb" />
     <entry file="file://$PROJECT_DIR$/influence/closed_forms.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -574,19 +489,11 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1568">
           <caret line="112" column="8" lean-forward="false" selection-start-line="112" selection-start-column="8" selection-end-line="112" selection-end-column="8" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$PROJECT_DIR$/influence/closed_forms.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="320">
@@ -610,26 +517,16 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="5584">
           <caret line="349" column="8" lean-forward="false" selection-start-line="349" selection-start-column="8" selection-end-line="349" selection-end-column="8" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$PROJECT_DIR$/influence/emp_risk_optimizer.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="848">
           <caret line="53" column="33" lean-forward="true" selection-start-line="53" selection-start-column="33" selection-end-line="53" selection-end-column="33" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
@@ -652,20 +549,8 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
+    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$USER_HOME$/anaconda/lib/python3.6/site-packages/tensorflow/python/ops/gradients_impl.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="215">
@@ -705,47 +590,12 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/data/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="9" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/influence/genericNeuralNet.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5184">
-          <caret line="324" column="8" lean-forward="false" selection-start-line="324" selection-start-column="8" selection-end-line="324" selection-end-column="8" />
-          <folding>
-            <element signature="e#0#31#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/influence/experiments.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1664">
-          <caret line="104" column="24" lean-forward="false" selection-start-line="104" selection-start-column="24" selection-end-line="104" selection-end-column="24" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tests.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="704">
-          <caret line="44" column="18" lean-forward="false" selection-start-line="44" selection-start-column="18" selection-end-line="44" selection-end-column="18" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/influence/genericNeuralNet.py" />
+    <entry file="file://$PROJECT_DIR$/influence/experiments.py" />
+    <entry file="file://$PROJECT_DIR$/tests.py" />
     <entry file="file://$PROJECT_DIR$/influence/plot_utils.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="272">
+        <state relative-caret-position="220">
           <caret line="17" column="24" lean-forward="false" selection-start-line="17" selection-start-column="24" selection-end-line="17" selection-end-column="24" />
           <folding>
             <element signature="e#0#9#0" expanded="true" />
@@ -753,37 +603,31 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/hyperplane_classifiers.ipynb" />
+    <entry file="file://$PROJECT_DIR$/sv_digits.ipynb" />
     <entry file="file://$PROJECT_DIR$/influence/emp_risk_optimizer.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="170">
-          <caret line="67" column="24" lean-forward="false" selection-start-line="67" selection-start-column="24" selection-end-line="67" selection-end-column="24" />
-          <folding>
-            <element signature="e#0#10#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/hyperplane_classifiers.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="2" />
+        <state relative-caret-position="508">
+          <caret line="960" column="59" lean-forward="false" selection-start-line="960" selection-start-column="59" selection-end-line="960" selection-end-column="59" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/models/hyperplane_clf.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1888">
-          <caret line="118" column="22" lean-forward="false" selection-start-line="118" selection-start-column="22" selection-end-line="118" selection-end-column="22" />
+        <state relative-caret-position="811">
+          <caret line="386" column="27" lean-forward="false" selection-start-line="386" selection-start-column="27" selection-end-line="386" selection-end-column="27" />
           <folding>
             <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/sv_digits.ipynb">
-      <provider selected="true" editor-type-id="ipnb-editor">
-        <state>
-          <selected id="0" />
+    <entry file="file://$PROJECT_DIR$/data/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="407">
+          <caret line="76" column="42" lean-forward="false" selection-start-line="76" selection-start-column="42" selection-end-line="76" selection-end-column="42" />
+          <folding />
         </state>
       </provider>
     </entry>

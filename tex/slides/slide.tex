@@ -50,7 +50,7 @@
 %////////////////////////////////////////////////////////////////////
 %////////////////////////////////////////////////////////////////////
 
-\title{Understanding Black-Box Predictions via Influence Functions}
+\title{Understanding Model Predictions via Influence Functions}
 
 \subtitle{Statistical Machine Final Project}
 
@@ -99,7 +99,7 @@
 
 \begin{frame}{Introduction}{}
     \begin{itemize}
-        \item  In this project, we reproduced the \emph{best paper} awardee of ICML 2017: \textit{Understanding Black-box Predictions via Influence Functions}, by Koh \& Liang.
+        \item  In this project, we reproduced the \emph{Best Paper} awardee of ICML 2017: \textit{Understanding Black-box Predictions via Influence Functions}, by Koh \& Liang.
         \item Our main topic is \textbf{influence function}, a technique to trace a model’s prediction through the learning algorithm and back to its training data.
         \item  We carried out efficient implementations with \texttt{Tensorflow}.
         \item We demonstrated its performance \& applications on real-world datasets.
@@ -124,7 +124,7 @@
 \end{frame}
 
 \begin{frame}{What is Influence Function: G\^ateaux Derivative}{}
-  Generalizes the idea of \textbf{directional derivatives}, but the inputs are CDFs!
+  \textbf{G\^ateaux Derivative} generalizes the idea of \textbf{directional derivatives} - the inputs are CDFs!
 \begin{align}\label{gateaux}
   \mathcal{I}_{\bm{\theta}}(G) &:= \nabla_{G} \bm{\theta}(F_Z)\biggr\rvert_{F_Z=F^*_Z} \notag\\
   &= \underset{h \to 0}{\lim}\frac{\bm{\theta}((1-h)F^*_Z + hG) - \bm{\theta}(F^*_Z)}{h}
@@ -299,7 +299,7 @@ The idea is to use power series (which converges in this case) to approximate he
         {
             Recall, $\mathcal{I}_{\fixwidehat{\bm{\theta}}}(\bm{z}_{i}) = {\lim}_{n \to \infty}-n(\fixwidehat{\bm{\theta}}_{-\frac{1}{n}, \bm{z}_i} - \fixwidehat{\bm{\theta}})$.
         }
-        \item influence function is an asymptotic approximation of the quantity $-n(\fixwidehat{\bm{\theta}}_{-\frac{1}{n}, \bm{z}_i} - \fixwidehat{\bm{\theta}})$, the difference between leave-one-out refitted parameter and the full empirical risk minimizer, scaled by the sample size.
+        \item Influence function = Asymptotic approximation of the LOO difference (of the influenced statistical functional)!
         \item Same argument holds for $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$.
         \item We test our influence function by plotting it against the LOO retraining difference.
    \end{itemize}
@@ -353,12 +353,11 @@ The idea is to use power series (which converges in this case) to approximate he
         \end{align}
         \item
         {
-        Let $\sigma(t)=1/(1+e^{-t})$, label $y\in \{0,1\}$, the influence of a training point $\bm{z}_{tr}$ on that validation loss is:
+        Let $\sigma(t)=1/(1+e^{-t})$, label $y\in \{0,1\}$. The influence also has a closed-form:
         \begin{align}\label{logit_I_loss}
         \vspace{-0.15in}
-        \mathcal{I}_{\mathcal{L}_{logit}}(\bm{z}_{tr}, \bm{z}_{te}) &= -\bm{x}_{tr}^{\top}\nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})^{-1} \bm{x}_{te}\cdot\\
-        &(\sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})-y_{tr})(\sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})-y_{te})\notag\\[-3pt]
-        \nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})&=\frac{1}{n}\sum_{i=1}^n \sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i)\sigma(-\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i)\bm{x}_i\bm{x}_i^{\top}\notag
+        \mathcal{I}_{\mathcal{L}_{logit}}(\bm{z}_{tr}, \bm{z}_{te}) &= -\bm{x}_{tr}^{\top}\left(\frac{1}{n}\sum_{i=1}^n \sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i)\sigma(-\fixwidehat{\bm{\theta}}^{\top}\bm{x}_i)\bm{x}_i\bm{x}_i^{\top}\right)^{-1} \bm{x}_{te}\cdot\notag\\
+        &(\sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})-y_{tr})(\sigma(\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})-y_{te})
         \vspace{-0.15in}
         \end{align}
         }
@@ -369,26 +368,41 @@ The idea is to use power series (which converges in this case) to approximate he
    \begin{itemize}
        \item
         {
-        We fit an $L_2$-regularized logistic regression model with $\lambda = 1000$ on the \href{http://yann.lecun.com/exdb/mnist/}{\texttt{MNIST}} dataset. For simplicity we only include digits 1 and 7, and we let the label $y=1$ stand for digit 1 and $y=0$ for digit 7.
+        We fit an $L_2$-regularized logistic regression on the \href{http://yann.lecun.com/exdb/mnist/}{\texttt{MNIST}} dataset. 
+        \item Binary case for simplicity: digits 1 and 7. Let the label $y=1$ stand for digit 1 and $y=0$ for digit 7.
         }
-        \item
-        {
-        Then we plot the actual LOO difference against its asymptotic approximation
-        }
+        \item We plot the actual LOO difference against the influence function.
+   \end{itemize}
+\end{frame}
+
+\begin{frame}{Logistic Regression}
+
 \begin{figure*}
 \vskip 0.0in
 \begin{center}
-\centerline{\includegraphics[width=0.44\columnwidth]{fig-logit}\includegraphics[width=0.143\columnwidth]{fig-logit-img}}
+\centerline{\includegraphics[width=3in]{fig-logit}\includegraphics[width=1.05in]{fig-logit-img}}
 \vskip -0.1in
 \label{logit_examples}
 \end{center}
 \vskip -0.25in
 \end{figure*} 
-   \end{itemize}
+
 \end{frame}
 
 \begin{frame}{Support Vector Machine}
-What if the loss function is not differentiable, such as hinge loss and $L_1$ regularization? The idea to make things work is to construct a smooth function that converges to the non-differentiable components of the loss function. Then, we minimize the smoothed version of the empirical risk, and compute $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$.
+
+\begin{itemize}
+  \item Many loss functions are non-differentiable.
+  \item Idea: construct a smooth function that \emph{converges} to the non-differentiable components.
+  \item Linear SVC Empirical Risk (Non-differentiable):
+  \begin{align}\label{svc_R}
+\vspace{-0.2in}
+R_{\text{sv}}(\fixwidehat{\bm{\theta}}) = \frac{1}{n}\sum_{i=1}^n \left[h\left(y_i(\bm{x}_i^{\top} \fixwidehat{\bm{\beta}} + \fixwidehat{\beta_0})\right) + \frac{\lambda}{2n} \left\lVert \bm{\beta}\right\rVert_2^2\right]
+\vspace{-0.2in}
+\end{align}
+\item ``Smooth Hinge'': replace $h(x) = \max\{0, 1-x\}$ with $h_t(x) := t\log(1+\text{exp}(\frac{1-x}{t}))$.
+\end{itemize}
+
 
 \begin{figure*}
 \vskip 0.0in
@@ -400,7 +414,6 @@ What if the loss function is not differentiable, such as hinge loss and $L_1$ re
 \vskip -0.2in
 \end{figure*} 
 
-   $h(x) = \max\{0, 1-x\}$ is the hinge loss. We use $h_t(x) := t\log(1+\text{exp}(\frac{1-x}{t}))$, the ``smooth hinge'' function.
 \end{frame}
 
 
@@ -427,7 +440,7 @@ What if the loss function is not differentiable, such as hinge loss and $L_1$ re
 \begin{figure}[ht]
 \vskip 0.0in
 \begin{center}
-\centerline{\includegraphics[width=0.8\columnwidth]{fig-components}}
+\centerline{\includegraphics[width=4.5in]{fig-components}}
 \vskip -0.1in
 \label{logit_components}
 \end{center}

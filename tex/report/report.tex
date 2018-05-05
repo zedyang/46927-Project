@@ -67,7 +67,7 @@
 \begin{document} 
 
 \twocolumn[
-\icmltitle{Title}
+\icmltitle{Understanding Model Predictions via Influence Functions}
 
 % It is OKAY to include author information, even for blind
 % submissions: the style file will automatically remove it for you
@@ -125,7 +125,7 @@ In this paper, we reproduced \cite{koh2017}, using influence functions to trace 
 \section{Introduction}
 \label{intro}
 
-Consider a supervised learning problem with random input variable $Z=(X,Y)\in \mathcal{X}\times \mathcal{Y}$, following the joint cumulative distribution $F_{X,Y}$. $\{\bm{z}_i\}_{i=1}^n = \{(\bm{x}_i, y_i)\}_{i=1}^n$ are the realizations of the input variables, i.e. the training points. Assume we are estimating a hypothesis parametrized by $\bm{\theta} \in \Theta$. Let $\mathcal{L}(\bm{z}, \bm{\theta})$\footnote{We fold in any regularization terms in to $\mathcal{L}$.} be the loss for a point $z$. The desired parameter $\bm{\theta}(F_Z)=\mathrm{argmin}_{\bm{\theta} \in \Theta}\mathbb{E}\left[\mathcal{L}(\bm{z},\bm{\theta})\right]$ minimizes the expected prediction error. 
+Consider a supervised learning problem with random input variable $Z=(X,Y)\in \mathcal{X}\times \mathcal{Y}$, following the joint CDF $F_{X,Y}$. $\{\bm{z}_i\}_{i=1}^n = \{(\bm{x}_i, y_i)\}_{i=1}^n$ are the realizations of the input variables, i.e. the training points. Assume we are estimating a hypothesis parametrized by $\bm{\theta} \in \Theta$. Let $\mathcal{L}(\bm{z}, \bm{\theta})$\footnote{We fold in any regularization terms in to $\mathcal{L}$.} be the loss for a point $z$. The desired parameter $\bm{\theta}(F_Z)=\mathrm{argmin}_{\bm{\theta} \in \Theta}\mathbb{E}\left[\mathcal{L}(\bm{z},\bm{\theta})\right]$ minimizes the expected prediction error. 
 
 $\bm{\theta}$, as well as many other $\mathcal{M}$-estimators, falls in to a broader concept of \textit{statistical functional} \cite{nonp}, which is a mapping from the space of population cumulative distribution to some field. Given the training set, the empirical cumulative distribution $\fixwidehat{F}_Z$ is usually our best estimate to the true underlying population distribution. $\fixwidehat{\bm{\theta}} = \bm{\theta}(\fixwidehat{F}_Z)$, the plug-in estimator of the statistical functional, is obtained by solving empirical risk minimization problem.
 \begin{align}\label{emprisk}
@@ -388,10 +388,11 @@ For our purpose, we train the logistic regression and linear SVC on the same \hr
 \vskip 0in
 \end{figure}
 
+% TODO
 \subsection{Fixing Mislabeled Examples}
-However, logistic regression looks at more points; while linear SVC \emph{does not} look at points that are too far away from the boundary: those points have zero influence on testing loss.
+TODO
 
-\section{Code}
+\section{Software Package}
 We built a generic empirical risk optimizing framework with \texttt{Tensorflow} to compute influence functions for various models, and we also implemented CG and LiSSA algorithm to scale up to large datasets. With the help of auto-gradients system, the required gradients and hessian-vector products are automatically kept track of. The user only need to define the empirical risk funtion and its parametrization. All of our code, data, and reproducible experiments are available in our \href{https://github.com/zedyang/46927-Project}{Github repository}.
 
 
