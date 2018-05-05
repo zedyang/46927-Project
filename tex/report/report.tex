@@ -369,7 +369,7 @@ We fit a smoothed linear SVC with $\lambda = 2.0$ on the classic \href{https://a
 \section{Applications}
 The influence function can be applied in many real-life cases, and can help us get a better understanding upon how black-box models rely on and extrapolate from the training data. \cite{koh2017} discussed different use cases of influence functions, including adversarial training (training set attacks), debugging domain mismatch, and fixing mislabeled examples.
 
-In this section, we perform two additional experiments to exemplify the applications of influence functions. The first is to uncover the difference of two hyperplane classifiers and to understand their behaviors; the second is to use influence function to identify mislabeled training examples.
+In this section, we perform an additional experiments to exemplify the applications of influence functions: We uncover the difference of two hyperplane classifiers and understand their behaviors with the help of influence function. 
 
 \subsection{Understanding Model Behavior}
 Two models can make the same correct predictions and achieve similar level of performance, but get there in very different ways. Binary logistic regression and linear support vector classifier are very simple models. They can be both regarded as a separating hyperplane that tries to cut the high-dimensional data into two classes. Nevertheless, they have very different behaviors and interpretations. This difference is, indeed, a direct result from the different mathematical form of the loss functions. Therefore, looking at $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ of both models for the same dataset can give us an intuitive picture in terms of how the two mathematical form of $\mathcal{L}(\bm{z}, \fixwidehat{\bm{\theta}})$ trace back to the same training data in different ways.
@@ -388,9 +388,6 @@ For our purpose, we train the logistic regression and linear SVC on the same \hr
 \vskip 0in
 \end{figure}
 
-% TODO
-\subsection{Fixing Mislabeled Examples}
-TODO
 
 \section{Software Package}
 We built a generic empirical risk optimizing framework with \texttt{Tensorflow} to compute influence functions for various models, and we also implemented CG and LiSSA algorithm to scale up to large datasets. With the help of auto-gradients system, the required gradients and hessian-vector products are automatically kept track of. The user only need to define the empirical risk funtion and its parametrization. All of our code, data, and reproducible experiments are available in our \href{https://github.com/zedyang/46927-Project}{Github repository}.
