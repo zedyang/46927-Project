@@ -358,11 +358,17 @@ class SmoothedSupportVector(EmpiricalRiskOptimizer):
                 feed_dict['X'], feed_dict['y'],
                 n_iter=None, lazy_fit=True)
 
+        tol, max_iter = 1e-7, 2000
+        if 'tol' in kwargs:
+            tol = kwargs.pop('tol')
+        if 'max_iter' in kwargs:
+            max_iter = kwargs.pop('max_iter')
+
         self.sklearn_clf = SVC(
             C=self.C,
             kernel='linear',
-            tol=1e-8,
-            max_iter=-1
+            tol=tol,
+            max_iter=max_iter
         )
         self.sklearn_clf.fit(
             feed_dict['X'],

@@ -120,8 +120,7 @@
 %\footnotetext{hi}
 
 \begin{abstract} 
-The purpose of this document is to provide both the basic paper template and
-submission guidelines. Abstracts should be a single paragraph, between 4--6 sentences long, ideally.  Gross violations will trigger corrections at the camera-ready phase.
+In this project, we explore \cite{koh2017}. We successfully implement the efficient technique to calculate influence function that requires only oracle access to gradients and Hessian-vector products mentioned in the paper. 
 \end{abstract} 
 
 \section{Introduction}
@@ -273,7 +272,7 @@ Note that we fold the regularization term within the loss function, and scale it
 \begin{figure*}[ht]
 \vskip 0.0in
 \begin{center}
-\centerline{\includegraphics[width=\columnwidth*2]{fig-ridge}}
+\centerline{\includegraphics[width=2.1\columnwidth]{fig-ridge}}
 \vskip -0.1in
 \caption{\textbf{Influence function} $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ \textbf{matches leave-one-out difference.} We randomly picked a validation point $\bm{z}_{te}$ and calculated the influence on validation loss for all training points $\bm{z}_i$. In this illustration $\bm{z}_{te}$ is the $42^{\text{rd}}$ instance in the dataset, and $\mathcal{I}_{\mathcal{L}}$ was evaluated for the rest 516 points. \textbf{(Panel-1):} We plotted the LOO difference $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}_{-\frac{1}{n},\bm{z}_i})$ $- \mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$ against $-\frac{1}{n}\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})$ for each $\bm{z}_i$. The influence is calucated by explicitly forming and inverting hessian matrix $\nabla_{\bm{\theta}}^2 R(\fixwidehat{\bm{\theta}})$. \textbf{(Panel-2):} The influence is evaluated by solving the linear system with conjugate gradients, only hessian-vector products were evaluated. \textbf{(Panel-3):} The influence was evaluated with the original Taylor approximation. The recursion step is \emph{exactly} the same as (\ref{lissarule}), i.e. the HVPs were evaluated with the \emph{full} empirical risk $R(\fixwidehat{\bm{\theta}})$. We set the recursion depth to be $m=2000$, and we divided the HVPs by a scaling constant $C=400$ to ensure the convergence of the power series. \textbf{(Panel-4):} The influence was evaluated with the LiSSA algorithm: for each recursion step, the algorithm only look at one training point $\bm{z}_j$, and the HVP was evaluated with that \emph{single} element of loss $\mathcal{L}(\bm{z}_j, \fixwidehat{\bm{\theta}})$. We used the same recursion depth and scaling constant.} 
 \label{ridge_examples}
@@ -316,48 +315,86 @@ One can examine that (\ref{logit_I_loss}) and (\ref{logit_I_loss2}) are equivale
 \begin{figure*}[ht]
 \vskip 0.0in
 \begin{center}
-\centerline{\includegraphics[width=1.4\columnwidth]{fig-logit}
-\includegraphics[width=0.487\columnwidth]{fig-logit-img}}
+\centerline{\includegraphics[width=1\columnwidth]{fig-logit}
+\includegraphics[width=0.35\columnwidth]{fig-logit-img}}
 \vskip -0.1in
 \caption{\textbf{Influence for handwritten digits classification.} In this illustration $\bm{z}_{te}$ is the $7^{\text{th}}$ instance in the dataset. The red dots stand for positive points, blue for negative points. \textbf{(Left):} We plotted the LOO difference $\mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}}_{-\frac{1}{n},\bm{z}_i})$ $- \mathcal{L}(\bm{z}_{te}, \fixwidehat{\bm{\theta}})$ against $-\frac{1}{n}\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})$ for all the three methods. The explicit hessian inverse and the CG method are the same as we used in the Ridge experiment. For the LiSSA method we sampled 1 training point in each recursion step, and we set the recursion depth as $m=10000$; we divided the HVPs by a scaling constant $C=10^3$. An outlier can be observed in the Southwest panel where we ran the LiSSA algorithm only once. In the Southeast panel, we ran the algorithm 10 times, and took average to obtain the final estimate. The variance is reduced and the outlier has gone. \textbf{(Right):} The upper panel shows the validation point. The middle panel is the training point with the smallest influence, i.e. the smallest $| \mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te}) |$. It looks like an ``easy'' positive point. The bottom panel is the training point with the largest negative influence, which looks like a ``hard'' positive point. It can be thought as the most harmful to predicting $\bm{z}_{te}$ in the sense that removing this point will cause reduce the prediction loss.} 
 \label{logit_examples}
 \end{center}
-\vskip -0.25in
+\vskip -0.3in
 \end{figure*} 
 
 We fit an $L_2$-regularized logistic regression model with $\lambda = 1000$ on the \href{http://yann.lecun.com/exdb/mnist/}{\texttt{MNIST}} dataset. For simplicity we only include digits 1 and 7, and we let the label $y=1$ stand for digit 1 and $y=0$ for digit 7. The resulting binary MNIST dataset has 9084 instances; each instance is a $28\times 28$ image, represented by grayscale matrix. We first standardize the data before training the model, it turns out that standardizing helps control the numerical scale of losses, and stabilizes the influence calculation. Then, we randomly choose a testing point and calculate the influence of the rest training points; we also compute the actual LOO difference using \texttt{sklean}'s LBFGS solver. The results are presented in Figure \ref{logit_examples}. Note that there are points from both classes that have positive or negaive influences, indicating that $\text{sgn}(\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te}))$ is \emph{not} determined by whether $y_{te}=y_{tr}$ or not.
 
 On \href{http://yann.lecun.com/exdb/mnist/}{\texttt{MNIST}} dataset, we performed another analysis on the closed-form expression (\ref{logit_I_loss2}): we examined the effect of the $\sigma(-y_{tr}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})$ factor and the hessian matrix on the influence. The analysis is shown in Figure \ref{logit_components}. In particular, we replicated the approach in the original paper by plotting $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ calculated by (\ref{logit_I_loss2}) against its variants that misses certain factor(s). 
 
-\begin{figure}[ht]
+\setcounter{figure}{3}
+\begin{figure*}[h]
+\vskip 0.0in
+\begin{center}
+\centerline{\includegraphics[width=2.1\columnwidth]{fig-svm}}
+\vskip -0.1in
+\caption{\textbf{Smooth approximation to the non-differentiable loss.}  In this illustration, the red dots stand for $y=1$ points, blue for $y=-1$ points. The influence calculated with \emph{smoothed} hinge loss is plotted on y-axis, while the LOO difference in exact hinge loss ($t=0$) is plotted on x-axis. The black-dashed line has slope 1. \textbf{(Panel-1):} By varying $t$, we can approximate the hinge loss with arbitrary accuracy. \textbf{(Panel-2):} We force the system to compute $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ for the $t=0$ non-differentiable case. The influence function is not a good estimate of LOO difference, overestimating it disastrously. The is due to the fact that $\nabla^2 R_{\text{sv}}(\fixwidehat{\bm{\theta}})$ is close to zero in this setting, providing no information to the quadratic approximation of $\mathcal{L}(\bm{z}, \fixwidehat{\bm{\theta}})$. As a result, the quadratic approximation is linear, leading to overestimating the true influence. \textbf{(Panel-3):} The influence is computed for the smoothed empirical risk with $t=0.01$. The correlation coefficient between $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ and hinge LOO difference is $0.8602$. \textbf{(Panel-4):} $t=0.1$, correlation is $0.7700$. With $t$ too large, the smoothed loss is no longer a good approximation of the original hinge loss, so the correlation decreases.}
+\label{smoothsvm}
+\end{center}
+\vskip -0.25in
+\end{figure*}
+
+\setcounter{figure}{2}
+\begin{figure}[H]
 \vskip 0.0in
 \begin{center}
 \centerline{\includegraphics[width=\columnwidth]{fig-components}}
 \vskip -0.1in
-\caption{\textbf{Components of influence.} The correct influence is plotted on y-axis, while its variants that misses certain factor(s) are plotted on x-axis. Blue dots are the training points with \emph{same label} as $\bm{z}_{te}$; red dots are the opposites. \textbf{(Left):} The black-dashed line has slope = 1; one can observe that many points lie to the right of the $45^{\circ}$ line in the first quadrant, which implies that overestimate the influence of these training points if the factor $\sigma(-y_{tr}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})$ was excluded. \textbf{(Mid):} Without the hessian inverse, $\text{sgn}(\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})) = \bm{1} (y_{te}=y_{tr})$. This is due to the fact that we used the unscaled data, where all features are positive grayscales. Clearly, this is incorrect since we have illustrated in Fugure \ref{logit_examples} that points from both classes can be helpful or harmful. \textbf{(Right):} Without both factors, the influence degenerates into $\bm{x}_{tr}^{\top} \bm{x}_{te}\cdot [y_{tr}y_{te}\sigma(-y_{te}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})] = \bm{x}_{tr}^{\top} \bm{x}_{te}c$, which is just the inner product scaled by a constant. } 
+\caption{\textbf{Components of influence.} The correct influence is plotted on y-axis, while its variants that misses certain factor(s) are plotted on x-axis. Blue dots are the training points with \emph{same label} as $\bm{z}_{te}$; red dots are the opposites. \textbf{(Left):} The black-dashed line has slope = 1; one can observe that many points lie to the right of the $45^{\circ}$ line in the first quadrant, suggesting that we overestimate the influence of these training points if the factor $\sigma(-y_{tr}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{tr})$ was excluded. \textbf{(Mid):} Without the hessian inverse, $\text{sgn}(\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})) = \bm{1} (y_{te}=y_{tr})$. This is due to the fact that we used the unscaled data, where all features are positive grayscales. Clearly, this is incorrect since we have illustrated in Fugure \ref{logit_examples} that points from both classes can be helpful or harmful. \textbf{(Right):} Without both factors, the influence degenerates into $\bm{x}_{tr}^{\top} \bm{x}_{te}\cdot [y_{tr}y_{te}\sigma(-y_{te}\fixwidehat{\bm{\theta}}^{\top}\bm{x}_{te})] = \bm{x}_{tr}^{\top} \bm{x}_{te}c$, which is just the inner product scaled by a constant. } 
 \label{logit_components}
 \end{center}
-\vskip -0.25in
+\vskip 0in
 \end{figure}
 
 
-
-
-
-
-
-
-
-
-
 \subsection{Support Vector Machine}
+Until now, we have assumed that the loss function is twice differentiable. However, non-differentiable losses, such as hinge loss and $L_1$ regularization, are common in statistical learning. The idea to make things work is to construct a smooth function that converges to the non-differentiable components of the loss function. Then, we minimize the smoothed version of the empirical risk, and compute $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$. In this section, we examplify this general idea with the linear support vector classifier. Besides, we show that the influence computed for the smoothed linear SVC is still a good approximation to the LOO difference.
+
+For a binary classification problem with label $y\in\{1,-1\}$, the linear SVC hypothesis is parametrized by weights and intercept: $\bm{\theta} = (\bm{\beta}, \beta_0)$, and the empirical risk is, by \cite{ESL}:
+\begin{align}\label{svc_R}
+\vspace{-0.2in}
+R_{\text{sv}}(\fixwidehat{\bm{\theta}}) = \frac{1}{n}\sum_{i=1}^n \left[h\left(y_i(\bm{x}_i^{\top} \fixwidehat{\bm{\beta}} + \fixwidehat{\beta_0})\right) + \frac{\lambda}{2n} \left\lVert \bm{\beta}\right\rVert_2^2\right]
+\vspace{-0.2in}
+\end{align}
+Where $h(x) = \max\{0, 1-x\}$ is the hinge loss. \cite{koh2017} constructed a smooth approximation of $h$. Let $t>0$ be a constant hyperparameter, define $h_t(x) := t\log(1+\text{exp}(\frac{1-x}{t}))$, one can show that $h_t$ converges to $h$ as $t\to 0$. (See Figure \ref{smoothsvm} Panel-1). Therefore, we replace the hinge function in (\ref{svc_R}) with $h_t$, and examine the influence induced by the hessian matrix of this smoothed empirical risk.
+
+We fit a smoothed linear SVC with $\lambda = 2.0$ on the classic \href{https://archive.ics.uci.edu/ml/datasets/iris}{\texttt{Iris}} dataset. For simplicity we only include two classes: $y=1$ for \emph{Versicolor}, and $y=-1$ for \emph{Virginica}. The resulting binary Iris dataset has 100 instances and 4 features. We start by randomly choosing 10 testing points, fit the smoothed linear SVC, and calculate the influence of the rest training points with (\ref{svc_R}). Then, we compute the actual LOO difference using the original hinge loss ($t=0$). The results are presented in Figure \ref{smoothsvm}. 
+
 
 \section{Applications}
+The influence function can be applied in many real-life cases, and can help us get a better understanding upon how black-box models rely on and extrapolate from the training data. \cite{koh2017} discussed different use cases of influence functions, including adversarial training (training set attacks), debugging domain mismatch, and fixing mislabeled examples.
+
+In this section, we perform two additional experiments to exemplify the applications of influence functions. The first is to uncover the difference of two hyperplane classifiers and to understand their behaviors; the second is to use influence function to identify mislabeled training examples.
+
 \subsection{Understanding Model Behavior}
+Two models can make the same correct predictions and achieve similar level of performance, but get there in very different ways. Binary logistic regression and linear support vector classifier are very simple models. They can be both regarded as a separating hyperplane that tries to cut the high-dimensional data into two classes. Nevertheless, they have very different behaviors and interpretations. This difference is, indeed, a direct result from the different mathematical form of the loss functions. Therefore, looking at $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ of both models for the same dataset can give us an intuitive picture in terms of how the two mathematical form of $\mathcal{L}(\bm{z}, \fixwidehat{\bm{\theta}})$ trace back to the same training data in different ways.
+
+For our purpose, we train the logistic regression and linear SVC on the same \href{https://archive.ics.uci.edu/ml/datasets/iris}{\texttt{Iris}} dataset, and compute $\mathcal{I}_{\mathcal{L}}(\bm{z}_{tr}, \bm{z}_{te})$ for \emph{the same} testing point. By plotting the influence against the Euclidean distance to the decision boundary (see Figure \ref{model_behav_fig}), we found the two models behave differently in terms of how the training data are used for prediction: Both models put more leverage on the points that are closer to the separating hyperplane. However, logistic regression looks at more points; while linear SVC \emph{does not} look at points that are too far away from the boundary: those points have zero influence on testing loss.
+
+\setcounter{figure}{4}
+\begin{figure}[h]
+\vskip 0.0in
+\begin{center}
+\centerline{\includegraphics[width=\columnwidth]{fig-app1}}
+\vskip -0.1in
+\caption{\textbf{Logistic regression V.S. Linear SVC.} We compare the behavior of logistic regression and linear SVC for the same testing point. For each training point $\bm{z}_{i}$, $\mathcal{I}_{\mathcal{L}}(\bm{z}_{i}, \bm{z}_{te})$ is plotted on y-axis; while $ (\bm{x}_{i}^{\top}\fixwidehat{\bm{\beta}}+\beta_0) / \left\lVert \fixwidehat{\bm{\beta}}\right\rVert$, the Euclidean distance to the decision boundary is plotted on x-axis. \textbf{(Left):} For logistic regression, the absolute value of influence decreases slowly for points that are further away from the boundary, and it's always non-zero. \textbf{(Mid):} The thin dashed line connects the same training point in the two settings; the ticks on y-axis mark the influence level of that particular training point; the color of ticks stand for distance to the boundary: blueish for close, redish for faraway. \textbf{(Right):} For linear SVC, the influence decrease much faster, and those training points that are far beyond the margin have literally zero influence.} 
+\label{model_behav_fig}
+\end{center}
+\vskip 0in
+\end{figure}
+
+\subsection{Fixing Mislabeled Examples}
+However, logistic regression looks at more points; while linear SVC \emph{does not} look at points that are too far away from the boundary: those points have zero influence on testing loss.
+
 \section{Discussion}
 
 
-~\newpage 
 \ifx
 The guidelines below will be enforced for initial submissions and
 camera-ready copies.  Here is a brief summary:
@@ -803,7 +840,7 @@ support.
 \nocite{langley00}
 \fi
 
-\bibliography{example_paper}
+\bibliography{report}
 \bibliographystyle{icml2017}
 
 \end{document} 

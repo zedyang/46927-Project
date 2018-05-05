@@ -913,7 +913,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
     def leave_one_out_refit(self, X_valid, y_valid,
                             n_iter, iter_to_load, leave_indices=None,
                             verbose=0.1, force_restart=False,
-                            sklearn_refit=False):
+                            sklearn_refit=False, **kwargs):
         """
 
         :param X_valid:
@@ -958,7 +958,7 @@ class EmpiricalRiskOptimizer(BaseEstimator, TransformerMixin):
             if sklearn_refit:
                 # refit with sklearn estimator
                 self.refit_with_sklearn(
-                    feed_dict=leave_one_feed_dict)
+                    feed_dict=leave_one_feed_dict, **kwargs)
                 emp_risk_val = self.sess.run(
                     self.emp_risk,
                     feed_dict=leave_one_feed_dict)
